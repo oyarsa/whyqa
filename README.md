@@ -11,3 +11,13 @@ Either way, you want three files (based on the Google Drive link):
 - `test_full.json`: test set (`test.json` on Hugging Face Datasets)
 - `train.json`: train set
 - `val.json`: validation set (`validation.json` on Hugging Face Datasets)
+
+## Getting started
+
+This repository is tested with Python 3.11. To install the dependencies, run:
+
+```sh
+pip install -r requirements.txt
+```
+
+Using a virtual environment is recommended.
