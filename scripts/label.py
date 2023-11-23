@@ -25,14 +25,16 @@ def label_entry() -> bool | None:
 def main(path: Path) -> None:
     data = json.loads(path.read_text())
 
-    for item in data:
+    for i, item in enumerate(data):
         if item.get("valid") is not None:
             continue
 
-        print(f'Story: {item["narrative"]}')
+        print(f"[{i + 1}/{len(data)}]")
+        print(f'\nStory: {item["narrative"]}')
         print(f'\nQuestion: {item["question"]}')
         print(f'\nAnswer: {item["answer"]}')
         print(f'\nPred: {item["pred"]}')
+        print()
 
         valid = label_entry()
         if valid is None:
@@ -40,6 +42,7 @@ def main(path: Path) -> None:
 
         item["valid"] = valid
 
+        print()
         print("-" * 80)
         print()
 
