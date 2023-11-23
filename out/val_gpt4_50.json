@@ -1,0 +1,402 @@
+[
+    {
+        "narrative": "Mya wanted to be a cook. She took a few classes. Soon she was a great cook! Then she applied for a job at a restaurant. They hired Mya right away!",
+        "question": "Why did She take a few classes?",
+        "answer": "Myra wanted to learn to cook.",
+        "pred": "She took a few classes to become a great cook.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:03:57.865911+00:00"
+    },
+    {
+        "narrative": "I was chosen to give an important speech to my class. I worked very hard on writing the speech. I practiced in front of family and friends. When the time came to give the speech, I forgot it. I made up a speech on the spot that the class enjoyed.",
+        "question": "Why did I practice in front of family and friends?",
+        "answer": "the speech was important.",
+        "pred": "To prepare for giving the speech to the class.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:03:59.996663+00:00"
+    },
+    {
+        "narrative": "Sue's mom took her shopping before she moved into the dorm. Sue wanted a leopard print bed-in-a-bag, but her mom said no. She reminded Sue that her grandma had made her a patchwork quilt. Sue was jealous when her new roommate unpacked a zebra bed-in-a-bag. But the roommate touched the patchwork quilt with quiet reverence.",
+        "question": "Why did She remind Sue?",
+        "answer": "they didn't have to spend money.",
+        "pred": "She reminded Sue because her grandma had made her a patchwork quilt.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:04:01.257551+00:00"
+    },
+    {
+        "narrative": "I had dinner with three coworkers in October. Rita is a single 49 year old white woman. Estelle is a 40 year old black woman and Steve is white. Rita told us she would not date interracially because of her father. Everyone said Rita was foolish.",
+        "question": "Why did Rita tell us?",
+        "answer": "Rita wanted us to know she wouldn't date someone of another race.",
+        "pred": "Rita told them she would not date interracially because of her father.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:04:03.292470+00:00"
+    },
+    {
+        "narrative": "Anthony arrived at the motel in a cab. He asked two girls to drive him to a bus station. They said no and went upstairs to their hotel room. David, a man just out of prison, followed them into their hotel room. Anthony shot David but Anthony had to go to jail for murder.",
+        "question": "Why did Anthony shoot David?",
+        "answer": "Anthony shot David but Anthony had to go to jail for murder.",
+        "pred": "The story does not provide specific information on why Anthony shot David.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:04:05.849400+00:00"
+    },
+    {
+        "narrative": "I was having trouble finding my comfortable slippers. I looked everywhere for them. I found them on my wife's feet. She told me she found them in the living room. Finders keepers, she told me.",
+        "question": "Why did She tell me?",
+        "answer": "my wife said the slippers were now hers since she located them first.",
+        "pred": "She told you because she was wearing your slippers and wanted to explain why she had them.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:04:09.582666+00:00"
+    },
+    {
+        "narrative": "Nick was a student at a large university. Nick had a classmate named Phil. Nick and Phil worked on a project together. They got along quite well. Nick and Phil became close friends.",
+        "question": "Why did Nick and Phil become close friends?",
+        "answer": "they got along well working on a project.",
+        "pred": "Nick and Phil became close friends because they worked on a project together and got along quite well.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:04:11.275511+00:00"
+    },
+    {
+        "narrative": "There was a crowd outside the clothing store that day. Everything was on sale. As soon as opening time came the doors started to open. The large crowd burst forward and into the store. They devoured nearly everything and destroyed anything in their path.",
+        "question": "Why was There a crowd outside the clothing store?",
+        "answer": "the crowd wanted to buy discounted garments.",
+        "pred": "Everything was on sale.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:04:11.993022+00:00"
+    },
+    {
+        "narrative": "Bob bought a gun and wanted to try it out. He went through his garbage and pulled out old cans. He placed the cans on a fence. He took aim and shot at the cans. Bob missed most of the cans at first.",
+        "question": "Why did He go through his garbage?",
+        "answer": "Bob wanted to shoot old cans.",
+        "pred": "He went through his garbage to find old cans to use as targets for shooting practice.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:04:14.050028+00:00"
+    },
+    {
+        "narrative": "Sue wanted to go on vacation after studying hard in college. She completed all her term papers and exams. Sue and her friends planned their vacation. They packed up their bags and drove to an airport. They hopped on an airplane and flew to an island getaway.",
+        "question": "Why did She complete all her term papers and exams?",
+        "answer": "She completed all her term papers and exams.",
+        "pred": "She completed all her term papers and exams because she was studying hard in college.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:04:16.088836+00:00"
+    },
+    {
+        "narrative": "Billy had to write an essay for his class tomorrow. He wrote the majority of it last week so he was not worried. When he began to finish up his essay his computer started sputtering. The screen turned blue and would not function. He emailed his teacher about an extension for his assignment.",
+        "question": "Why did He email his teacher?",
+        "answer": "Billy needed an extension.",
+        "pred": "He emailed his teacher to ask for an extension for his assignment because his computer malfunctioned.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:04:17.829780+00:00"
+    },
+    {
+        "narrative": "Kim gathered all her pots and pans from the kitchen. She arranged them upside down in a circle around her. She hit them with a wooden spoon to hear the tone. Kim moved the pots and pans in tone order. She played her favorite songs on the pots and pans.",
+        "question": "Why did Kim gather all her pots and pans?",
+        "answer": "she wanted to play her favorite songs on them.",
+        "pred": "Kim gathered all her pots and pans to play her favorite songs on them.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:04:19.058365+00:00"
+    },
+    {
+        "narrative": "Kelly's brother married Alaina. Alaina liked Kelly a lot. She invited her to paint ceramics. They called their outing Sister Day. Every year, they celebrated Sister Day in a new way.",
+        "question": "Why did They call their outing Sister Day?",
+        "answer": "They called their outing sister day because they are now sisters-in-law.",
+        "pred": "They called their outing Sister Day because Alaina, who married Kelly's brother, considered Kelly as her sister and they spent the day together.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:04:23.462037+00:00"
+    },
+    {
+        "narrative": "Helen raced to catch the train to work. She ran through puddles and over potholes. She pushed past people and knocked down a fruit stand. She saw the sign for her subway and flew down the stairs. She stopped short at the bottom and watched the train pull away.",
+        "question": "Why did She see the sign for her subway?",
+        "answer": "She ran through puddles and over potholes. so She saw the sign for her subway.",
+        "pred": "Because she was trying to catch the train to work.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:04:25.202145+00:00"
+    },
+    {
+        "narrative": "We went to the beach today. My brother and I built a sand castle. We made a mote around the castle. The waves crashed on the shore and washed the castle away. We had a lot of fun building our sand castle.",
+        "question": "Why did We go to the beach?",
+        "answer": "My brother and I built a sand castle.So We went to the beach.",
+        "pred": "The story does not provide a specific reason why they went to the beach.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:04:28.580381+00:00"
+    },
+    {
+        "narrative": "Jesse wanted to upgrade his smartphone. He researched many different phones online. He drove to the mall. He visited several stores in person. He found a phone he liked and purchased it.",
+        "question": "Why did He research many different phones?",
+        "answer": "Jesse wanted to upgrade his smartphone. so He researched many different phones.",
+        "pred": "Jesse researched many different phones to decide which one he wanted to upgrade to.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:04:30.219310+00:00"
+    },
+    {
+        "narrative": "A pool of blood was in the center of the floor. Mike fumed to his boss about it. He insisted it was a clear safety violation. His boss told him that it was only if an inspector saw it. Mike grumbled and went back to slaughtering the cow.",
+        "question": "Why did Mike grumble ?",
+        "answer": "Mike's boss didn't care.",
+        "pred": "Mike grumbled because his boss dismissed his concerns about the pool of blood being a safety violation.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:04:32.312459+00:00"
+    },
+    {
+        "narrative": "Billy is a big Patriots fan and was very excited for Super Bowl 49. His team was playing the Seattle Seahawks. On the last drive, Russell Wilson drove down the field to take the lead Malcolm Butler of the Patriots intercepted the ball. The Patriots won and Billy ran out of the lounge yelling.",
+        "question": "Why did The Patriots win ?",
+        "answer": "Malcolm Butler intercepted the ball.",
+        "pred": "The Patriots won because Malcolm Butler of the Patriots intercepted the ball.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:04:34.211853+00:00"
+    },
+    {
+        "narrative": "Tom was playing kickball with his friends. Suddenly, it started raining. Everyone went home. Tom stayed to play kickball by himself. Tom ended up having more fun playing alone.",
+        "question": "Why did Everyone go home?",
+        "answer": "it was raining.",
+        "pred": "Everyone went home because it started raining.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:04:35.135016+00:00"
+    },
+    {
+        "narrative": "Brady was washing all of his clothes. He made sure to hang dry his clothes to lower the electric bill. He forgot about the clothes while taking a nap. It rained while he was sleeping. His clothes were so wet that he had to use the dryer anyway.",
+        "question": "Why did He forget about the clothes?",
+        "answer": "He made sure to hang dry his clothes to lower the electric bill.",
+        "pred": "The story implies that he forgot about the clothes because he was taking a nap.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:04:37.593184+00:00"
+    },
+    {
+        "narrative": "Jimmy wasn't tired at his bedtime. His mom told him to go to sleep. He stayed up late reading books under the cover. He eventually went to sleep. He was very tired at school the next day.",
+        "question": "Why did He stay up?",
+        "answer": "Jimmy liked to read beneath the sheets.",
+        "pred": "He stayed up because he was reading books under the cover.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:04:39.521929+00:00"
+    },
+    {
+        "narrative": "Igor walked to and from work every day. The weather was lovely as he was about to head to work one day. He decided to check on the weather for later in the day. He learned that the weather was predicted to be very rainy later. As he left work he was glad he had decided to bring an umbrella.",
+        "question": "Why did He decide to check on the weather for later in the day?",
+        "answer": "Igor was walking home.",
+        "pred": "The story does not provide a specific reason why he decided to check on the weather for later in the day.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:04:43.227862+00:00"
+    },
+    {
+        "narrative": "John desperately needed some money to pay bills. He decided the best thing to do was to start his own business. John was really good at mowing lawns, so that is what he decided to do John worked very hard to make his business successful, and soon it was John soon had all the money he ever needed from his new business.",
+        "question": "Why was John really good at mowing lawns?",
+        "answer": "John was really good at mowing lawns, so that is what he decided to do.",
+        "pred": "The story does not provide information on why John was really good at mowing lawns.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:04:45.579648+00:00"
+    },
+    {
+        "narrative": "Charlie also picked up Pat Pat was fed up with it. Pat asked him to fight him after school They fought. Pat ended up winning",
+        "question": "Why did They fight ?",
+        "answer": "Pat was fed up.",
+        "pred": "They fought because Pat was fed up with Charlie and asked him to fight after school.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:04:48.164143+00:00"
+    },
+    {
+        "narrative": "Gary woke up feeling very ill. He asked his mother for some help to make him feel better. His mother gave him some medicine. The medicine did not work very well. Gary went to the doctor and was prescribe medicine that worked better.",
+        "question": "Why did Gary go to the doctor?",
+        "answer": "the medicine Gary's mother gave him didn't do the trick.",
+        "pred": "Gary went to the doctor because the medicine his mother gave him did not work very well.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:04:49.777312+00:00"
+    },
+    {
+        "narrative": "Sam wanted to learn soccer. He had his friend teach him how to kick. Sam practiced everyday. Sam tried out for the city's soccer team. Sam made the team because of all of the practice!",
+        "question": "Why did Sam try out?",
+        "answer": "Sam wanted to play soccer.",
+        "pred": "Sam tried out because he wanted to be on the city's soccer team.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:04:52.134339+00:00"
+    },
+    {
+        "narrative": "Joni rode in a helicopter today. She was nervous as the helicopter lifted off the ground. She felt the whole helicopter rattle and shake. Once they were in the sky, Joni could see everything in her city. Joni had never seen such a beautiful view before.",
+        "question": "Why did She feel the whole helicopter rattle and shake?",
+        "answer": "the helicopter was flying.",
+        "pred": "The helicopter was lifting off the ground.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:04:53.772228+00:00"
+    },
+    {
+        "narrative": "I learned the students in the gifted class received scholarships. I researched how to get in the gifted class. I took several tests. I waited for my exam results. I passed the gifted class and received my first scholarship.",
+        "question": "Why did I research how to get in the gifted class?",
+        "answer": "I wanted a scholarship.",
+        "pred": "Because you wanted to receive a scholarship.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:04:54.863644+00:00"
+    },
+    {
+        "narrative": "Ed wanted to play baseball with his son Matt. He bought a ball and bat. Then he taught Matt the rules. He and matt began practicing. Soon they were playing baseball every day together!",
+        "question": "Why did He and matt begin practicing?",
+        "answer": "Ed wanted Matt to be good.",
+        "pred": "They began practicing in order to play baseball together.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:04:56.810127+00:00"
+    },
+    {
+        "narrative": "I was listening to some music. Suddenly, my headphones stopped working. I tried to fix them but it was no use. I had to go to the shop to buy new headphones. I bought some headphones and could listen to my music once more!",
+        "question": "Why did I try to fix them?",
+        "answer": "my headphones had stopped working.",
+        "pred": "Because your headphones stopped working.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:04:57.766357+00:00"
+    },
+    {
+        "narrative": "Stan always had issues with insomnia. He was always tired and irritable. Stan decided to go to his doctor. His doctor gave him some sleeping medication. Stan sleeps well from now on.",
+        "question": "Why did Stan sleep well?",
+        "answer": "he now has sleeping pills.",
+        "pred": "Stan slept well because his doctor gave him some sleeping medication.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:04:59.814013+00:00"
+    },
+    {
+        "narrative": "Jeff jumped in the lake in April. The lake had just unfrozen. Jeff quickly got out of the lake. Jeff got pneumonia from jumping in the lake. Jeff recovered and learned his lesson.",
+        "question": "Why did Jeff get pneumonia?",
+        "answer": "the lake was previously frozen.",
+        "pred": "Jeff got pneumonia from jumping in the lake.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:05:01.454244+00:00"
+    },
+    {
+        "narrative": "Tim was afraid of his attic. It was old, moldy and dusty. Tim's dad had a plan. They both cleaned the entire attic one day. After that the attic looked beautiful to Tim.",
+        "question": "Why was It old , moldy and dusty?",
+        "answer": "the attic had not been washed or scrubbed.",
+        "pred": "The attic was old, moldy, and dusty because it had not been cleaned for a long time.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:05:03.193547+00:00"
+    },
+    {
+        "narrative": "Last week I went to the doctor. I drove all the way there and thought I was on time. When I got there I was told I was a week late. I tried to make a new appointment but they were booked for a month. I was really upset.",
+        "question": "Why did I try to make a new appointment?",
+        "answer": "I was a week late.",
+        "pred": "Because the original appointment was missed.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:05:04.525204+00:00"
+    },
+    {
+        "narrative": "Sara was in a good mood so she sang her favorite song. She forgot some of the words so she made them up. Sara liked her new version so she made up more words. She wrote down the words to remember them. Sara posted this song on her facebook to show her friends.",
+        "question": "Why did She write down?",
+        "answer": "she wanted to remember the words.",
+        "pred": "Sara wrote down the words to remember them.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:05:06.874991+00:00"
+    },
+    {
+        "narrative": "Ed is tired of the rain. He misses the beach. Ed books a flight to Hawaii. It rains the whole time. Ed wishes he would have stayed home.",
+        "question": "Why did Ed book a flight to Hawaii?",
+        "answer": "he missed the beach.",
+        "pred": "Ed booked a flight to Hawaii because he missed the beach.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:05:08.579978+00:00"
+    },
+    {
+        "narrative": "Dave was driving down a long, dark country road. Suddenly his car sputtered to a stop. Dave saw that he'd run out of gas! He got his gas can and started walking back down the road. He had to walk five miles before he saw a gas station!",
+        "question": "Why did He get his gas can?",
+        "answer": "Dave knew he could fill it up with gas and put that in the car.",
+        "pred": "He got his gas can to fill it up with gas at the gas station.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:05:10.053879+00:00"
+    },
+    {
+        "narrative": "Gina and her sister were watching music videos. They had been inside since noon watching videos. It was now 4 PM. Gina wanted to get up, but she was too lazy She stayed where she was and continued watching videos.",
+        "question": "Why did She stay where she was and continued watching videos?",
+        "answer": "Gina was too lazy to get up.",
+        "pred": "Gina stayed where she was and continued watching videos because she was too lazy to get up.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:05:12.408440+00:00"
+    },
+    {
+        "narrative": "Mary didn't like her job anymore. She decided that the work was too hard. Mary stopped going to work. Mary's boss called her in and fired her. Mary misses her old job now.",
+        "question": "Why did Mary stop going to work?",
+        "answer": "Mary stopped going to work.",
+        "pred": "She decided that the work was too hard.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:05:13.534367+00:00"
+    },
+    {
+        "narrative": "Sean was living in Oregon. Marijuana had been legalized last year and today, shops opened. Sean was one of the first people to go. He went through the ID process and then went inside. It felt so good to buy legal marijuana.",
+        "question": "Why did He go through the ID process?",
+        "answer": "Sean wanted to get legalized mirijuana.",
+        "pred": "He went through the ID process to verify his age before buying marijuana.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:05:15.872406+00:00"
+    },
+    {
+        "narrative": "Ben got a turtle. He put it in a tank. The turtle didn't eat the candy Ben gave it. Ben was sad. After research, Ben found the right food to feed it.",
+        "question": "Why did He put it?",
+        "answer": "He put it in a tank.",
+        "pred": "Ben put the turtle in a tank because it's the appropriate habitat for a turtle.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:05:17.836263+00:00"
+    },
+    {
+        "narrative": "Randy got a brand new car today. He drives it all around town, showing it off. His wife said that he is going to run out of gas soon. Randy agreed to only drive it when he needs to. Randy is now saving money on gas!",
+        "question": "Why did He drive it?",
+        "answer": "showing it off.",
+        "pred": "He drove it to show it off around town.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:05:19.577131+00:00"
+    },
+    {
+        "narrative": "Sydnee wanted to be a model as a child. Everyone had told her that she would never make it. She ended up ignoring their judgments. She applied that evening to become a model. She was accepted and is now modeling clothing for a living.",
+        "question": "Why did She apply that evening?",
+        "answer": "she wanted to be a model and was not deterred.",
+        "pred": "She applied that evening because she wanted to pursue her childhood dream of becoming a model, despite what others had told her.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:05:21.521811+00:00"
+    },
+    {
+        "narrative": "Al loved sad music. He used to lay in his room and cry. He thought he was only one who did this. He was listening to music with his girlfriend and he saw a tear fall. As soon as he saw the tear he asked her to be his wife.",
+        "question": "Why did He think he was only one who did this?",
+        "answer": "He thought he was only one who did this.",
+        "pred": "The story suggests that Al thought he was the only one who cried to sad music because he hadn't seen anyone else do it before.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:05:25.475568+00:00"
+    },
+    {
+        "narrative": "Margaret loved fashion. She had subscriptions to the top fashion magazines. Margaret's mother suggested that she study fashion design in college. Margaret took her mother's advice and applied to a fashion institute. Margaret was accepted and offered a scholarship to the school.",
+        "question": "Why had She subscriptions to the top fashion magazines?",
+        "answer": "Margaret loved fashion.so She had subscriptions to the top fashion magazines.",
+        "pred": "Because she loved fashion.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:05:26.235838+00:00"
+    },
+    {
+        "narrative": "Christian came home from school and saw his mother at the table. She asked him if he had any homework to do. Christian told his mother he had a ton of homework to do for class. Christian went upstairs, sat at his desk, and worked on his homework. Christian turned his homework into the teacher the next day.",
+        "question": "Why did She ask him?",
+        "answer": "Christian's mother wanted to know if Christian had any homework.",
+        "pred": "She asked him because she wanted to know if he had any homework to do.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:05:27.505308+00:00"
+    },
+    {
+        "narrative": "Jack used to be a baseball player. He had pictures on the walls of his home of the glory days. A friend of his came over and asked him about the pictures. Jack shyly refused to speak about his past and offered a drink. They spoke about their futures and laughed together.",
+        "question": "Why had He pictures on the walls of his home of the glory days?",
+        "answer": "Jack had been a basketball player.",
+        "pred": "Jack had pictures on the walls of his home of the glory days because he used to be a baseball player.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:05:31.148222+00:00"
+    },
+    {
+        "narrative": "Shay wanted her big sister to like her. She tried talking to her sister about things, but that never worked. Then she read a  oil that suggested she listen instead of talk. She began to ask her sister open-ended questions. Soon Shay was happily communicating with her big sister!",
+        "question": "Why did She try talking to her sister about things?",
+        "answer": "she wanted to two of them to be friendly.",
+        "pred": "Shay tried talking to her sister about things because she wanted her big sister to like her.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:05:35.451531+00:00"
+    },
+    {
+        "narrative": "Lucy was new to sewing. She wanted to make a tote, but had only ever made a pillow. The tote proved to be considerably more difficult. Lucy worked for hours sewing, ripping seams, and resewing. When she finished 5 hours later she was proud of all her hard work.",
+        "question": "Why did She want to make a tote?",
+        "answer": "Since she is new to sewing and wants to try out a tote, she attempted to make it.",
+        "pred": "The story does not provide information on why Lucy wanted to make a tote.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:05:38.213574+00:00"
+    },
+    {
+        "narrative": "Ryan's noticed that his grandmother was sad and lonely. He wanted to find a way to make her feel better. Ryan saw old photos of his grandmother with a pet. He went to the pet shop and bought a puppy. Ryan gave the new puppy to his grandmother.",
+        "question": "Why did He go to the pet shop?",
+        "answer": "Ryan wanted to buy a pet for his grandmother.",
+        "pred": "He went to the pet shop to buy a puppy for his grandmother.",
+        "model_used": "gpt-4",
+        "timestamp": "2023-11-22T13:05:40.571105+00:00"
+    }
+]
