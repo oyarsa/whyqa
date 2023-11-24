@@ -118,6 +118,7 @@ def main(
         dataset,
         print_messages,
     )
+    output.parent.mkdir(exist_ok=True, parents=True)
     output.write_text(json.dumps(processed_data, indent=4))
     print("Total cost:", total_cost)
 

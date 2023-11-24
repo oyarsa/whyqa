@@ -161,6 +161,7 @@ def main(
             print("-" * 80)
             print()
 
+    outdir.parent.mkdir(exist_ok=True, parents=True)
     with (outdir / "cost.csv").open("a") as f:
         ts = datetime.now(timezone.utc).isoformat()
         f.write(f"{ts},{total_cost}\n")
