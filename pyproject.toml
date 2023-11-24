@@ -3,7 +3,7 @@ name = "whyqa"
 version = "0.1.0"
 description = ""
 authors = ["Italo Silva <italo@maleldil.com>"]
-license = "GPLv3"
+license = "GPL-3.0-only"
 readme = "README.md"
 
 [tool.poetry.dependencies]
