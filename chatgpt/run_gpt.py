@@ -122,6 +122,10 @@ def main(
     output.write_text(json.dumps(processed_data, indent=4))
     print("Total cost:", total_cost)
 
+    with (output.parent / "cost.csv").open("a") as f:
+        ts = datetime.now(timezone.utc).isoformat()
+        f.write(f"{ts},{total_cost}\n")
+
 
 if __name__ == "__main__":
     typer.run(main)
