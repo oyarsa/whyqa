@@ -12,7 +12,6 @@ import typer
 from openai import OpenAI
 from tqdm import tqdm
 
-
 MODEL_COSTS = {
     "gpt-3.5-turbo": (  # in: $0.001 / 1K tokens, out: $0.002 / 1K tokens
         0.000001,

@@ -1,9 +1,8 @@
 # pyright: basic
-import json
-from pathlib import Path
-import urllib.request
 import argparse
-
+import json
+import urllib.request
+from pathlib import Path
 
 parser = argparse.ArgumentParser()
 parser.add_argument(

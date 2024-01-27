@@ -6,10 +6,9 @@ from pathlib import Path
 from typing import Any
 
 import typer
+from gpt_eval import calculate_cost
 from openai import OpenAI
 from tqdm import tqdm
-
-from gpt_eval import calculate_cost
 
 
 def process_dataset(
