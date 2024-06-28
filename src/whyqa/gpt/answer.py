@@ -222,36 +222,42 @@ def load_dataset(file: TextIO) -> list[Entry]:
     ]
 
 
-def get_args_() -> str | None:
-    """Render arguments of the current function.
+def get_args_() -> dict[str, str]:
+    """Get the arguments of the caller function.
 
     It does this by getting the frame of the caller and extracting the arguments.
-    Arguments of type `io.TextIOWrapper` are converted to their `name` attribute.
+    Values of type `io.TextIOWrapper` are converted to their `name` attribute.
+
+    Note: impure function - reads the stack frame.
 
     Returns:
-        A rendered string of the arguments, ready to be printed. If there is
-        trouble getting the frame, returns None.
+        Mapping of argument names to their string values.
     """
     current_frame = inspect.currentframe()
     if current_frame is None:
-        return None
+        return {}
 
     frame = current_frame.f_back
     if frame is None:
-        return None
+        return {}
 
     args, _, _, local_vars = inspect.getargvalues(frame)
 
-    out = [">>> ARGS:"]
+    result: dict[str, str] = {}
     for arg in args:
         value = local_vars[arg]
-        if isinstance(value, io.TextIOWrapper):
-            value_str = value.name
-        else:
-            value_str = str(value)
-        out.append(f"  {arg}: {value_str}")
+        result[arg] = value.name if isinstance(value, io.TextIOWrapper) else str(value)
 
-    return "\n".join(out) + "\n"
+    return result
+
+
+def render_args(args: dict[str, str]) -> str:
+    """Render the arguments as a string."""
+    return (
+        ">>> CONFIG\n"
+        + "\n".join(f"  {key}: {value}" for key, value in args.items())
+        + "\n"
+    )
 
 
 def main(
@@ -270,7 +276,8 @@ def main(
     num_outputs: int = typer.Option(1, min=1, help="Number of outputs to generate"),
     temperature: float = typer.Option(0, min=0, max=1, help="Temperature for GPT"),
 ) -> None:
-    print(get_args_())
+    args = get_args_()
+    print(render_args(args))
 
     dataset = load_dataset(file)
     if answerable_only:
@@ -311,11 +318,7 @@ def main(
     (output_dir / "metrics.json").write_text(
         json.dumps(asdict(metric_result), indent=2)
     )
-    print("\nFiles saved to:", output_dir)
-
-    with (output_dir / "cost.csv").open("a") as f:
-        ts = datetime.now(UTC).isoformat()
-        f.write(f"{ts},{sum(r.cost for r in data_answered)}\n")
+    (output_dir / "config.json").write_text(json.dumps(args, indent=2))
 
 
 if __name__ == "__main__":
