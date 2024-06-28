@@ -3,10 +3,10 @@ import json
 import random
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict
 
 import typer
-from gpt_eval import calculate_cost
+from whyqa.gpt_eval.gpt_eval import calculate_cost
 from openai import OpenAI
 from tqdm import tqdm
 
@@ -72,6 +72,22 @@ def process_dataset(
     return results, total_cost
 
 
+class ClientConfig(TypedDict):
+    api_type: str
+    key: str
+
+
+def init_client(api_type: str, config_from_type: dict[str, ClientConfig]) -> OpenAI:
+    """Create client for OpenAI API."""
+    config = config_from_type[api_type]
+
+    if not api_type.startswith("openai"):
+        raise ValueError(f"Unknown API type: {config['api_type']}")
+
+    print("Using OpenAI API")
+    return OpenAI(api_key=config["key"])
+
+
 SYSTEM_PROMPTS = {
     "simple": """You are a helpful assistant that can answer questions about why \
 things happen."""
@@ -85,18 +101,20 @@ in the text. The response should be just the answer, nothing else.""",
 
 
 def main(
-    file: Path,
-    output: Path,
-    n: int = 10,
-    rand: bool = False,
-    key_file: Path = Path("key"),
-    model: str = "gpt-3.5-turbo",
-    system_prompt: str = "simple",
-    user_prompt: str = "simple",
-    print_messages: bool = True,
-    include_unanswerable: bool = False,
+    file: typer.FileText = typer.Argument(..., help="Input JSON file"),
+    output: Path = typer.Argument(..., help="Path to output JSON file"),
+    model: str = typer.Argument(..., help="Model to use"),
+    key_file: Path = typer.Argument(..., help="Path to API key file"),
+    n: int = typer.Option(10, help="Number of samples to process"),
+    rand: bool = typer.Option(False, help="Randomise the dataset"),
+    system_prompt: str = typer.Option("simple", help="System prompt to use"),
+    user_prompt: str = typer.Option("simple", help="User prompt to use"),
+    print_messages: bool = typer.Option(False, help="Print messages sent to API"),
+    include_unanswerable: bool = typer.Option(
+        False, help="Include unanswerable questions"
+    ),
 ) -> None:
-    dataset = json.loads(file.read_text())
+    dataset = json.load(file)
     if not include_unanswerable:
         dataset = [
             d for d in dataset if d["is_ques_answerable_annotator"] == "Answerable"
@@ -127,4 +145,9 @@ def main(
 
 
 if __name__ == "__main__":
-    typer.run(main)
+    app = typer.Typer(
+        context_settings={"help_option_names": ["-h", "--help"]},
+        add_completion=False,
+    )
+    app.command()(main)
+    app()
