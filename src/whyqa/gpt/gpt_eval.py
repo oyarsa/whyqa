@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-# pyright: basic
 import json
 import random
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, no_type_check
 
 import pandas as pd
 import typer
@@ -77,6 +76,20 @@ Score: number from 1 to 5
 }
 
 
+@no_type_check
+def calc_frequencies(results: defaultdict[tuple[bool, int], int]) -> pd.DataFrame:
+    """Calculate the frequencies of the results.
+
+    The operations here make the type-checker go crazy, so we disable them.
+    """
+    df = pd.DataFrame(list(results.items()), columns=["Combination", "Count"])
+    df[["gold", "pred"]] = pd.DataFrame(df["Combination"].tolist(), index=df.index)
+    df = df.drop("Combination", axis="columns")
+    df["Count"] = df["Count"].astype(int)
+    df = df.pivot_table(index="gold", columns="pred", values="Count", fill_value=0)
+    return df
+
+
 def main(
     file: Path,
     outdir: Path = Path("out"),
@@ -122,9 +135,6 @@ def main(
     if n % 2 != 0:
         n += 1
 
-    # valids = [item for item in data if item["valid"]][: n // 2]
-    # invalids = [item for item in data if not item["valid"]][: n // 2]
-    # sampled_data = valids + invalids
     sampled_data = data[:n]
 
     messages: list[tuple[str, str, bool]] = []
@@ -162,15 +172,10 @@ def main(
 
     outdir.parent.mkdir(exist_ok=True, parents=True)
     with (outdir / "cost.csv").open("a") as f:
-        ts = datetime.now(timezone.utc).isoformat()
+        ts = datetime.now(UTC).isoformat()
         f.write(f"{ts},{total_cost}\n")
 
-    df = pd.DataFrame(list(results.items()), columns=["Combination", "Count"])
-    df[["gold", "pred"]] = pd.DataFrame(df["Combination"].tolist(), index=df.index)
-    df = df.drop("Combination", axis="columns")
-    df["Count"] = df["Count"].astype(int)
-    df = df.pivot_table(index="gold", columns="pred", values="Count", fill_value=0)
-
+    df = calc_frequencies(results)
     print(df)
     print(f"\nTotal cost: ${total_cost}")
 
