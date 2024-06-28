@@ -1,5 +1,6 @@
 import json
 import random
+from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, TypedDict
@@ -11,16 +12,28 @@ from tqdm import tqdm
 from whyqa.gpt.eval import calculate_cost
 
 
-def process_dataset(
+@dataclass(frozen=True)
+class Result:
+    """Output instance from the GPT answer."""
+
+    narrative: str
+    question: str
+    answer: str
+    pred: str
+    model_used: str
+    timestamp: str
+    cost: float
+
+
+def run_answer(
     client: OpenAI,
     model: str,
     system_prompt: str,
     user_prompt: str,
     dataset: list[dict[str, Any]],
     print_messages: bool,
-) -> tuple[list[dict[str, Any]], float]:
-    results: list[dict[str, Any]] = []
-    total_cost = 0
+) -> list[Result]:
+    results: list[Result] = []
 
     for item in tqdm(dataset):
         message = "\n\n".join(
@@ -47,17 +60,16 @@ def process_dataset(
 
         result = response.choices[0].message.content
         results.append(
-            {
-                "narrative": item["narrative"],
-                "question": item["question"],
-                "answer": item["answer"],
-                "pred": result,
-                "model_used": model,
-                "timestamp": datetime.now(UTC).isoformat(),
-            }
+            Result(
+                narrative=item["narrative"],
+                question=item["question"],
+                answer=item["answer"],
+                pred=result or "<empty>",
+                model_used=model,
+                timestamp=datetime.now(UTC).isoformat(),
+                cost=calculate_cost(model, response),
+            )
         )
-
-        total_cost += calculate_cost(model, response)
 
         if print_messages:
             answerable = item["is_ques_answerable_annotator"] == "Answerable"
@@ -69,7 +81,7 @@ def process_dataset(
             print("-" * 80)
             print()
 
-    return results, total_cost
+    return results
 
 
 class ClientConfig(TypedDict):
@@ -128,6 +140,7 @@ def main(
     client = OpenAI(api_key=key_file.read_text().strip())
 
     processed_data, total_cost = process_dataset(
+    data_answered = run_answer(
         client,
         model,
         SYSTEM_PROMPTS[system_prompt],
@@ -137,6 +150,7 @@ def main(
     )
     output.parent.mkdir(exist_ok=True, parents=True)
     output.write_text(json.dumps(processed_data, indent=4))
+    total_cost = sum(r.cost for r in data_answered)
     print("Total cost:", total_cost)
 
     with (output.parent / "cost.csv").open("a") as f:
