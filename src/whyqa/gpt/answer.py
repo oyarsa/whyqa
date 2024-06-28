@@ -22,16 +22,26 @@ class Entry:
 
 
 @dataclass(frozen=True)
+class Prediction:
+    pred: str
+    metrics: metrics.Result
+
+
+@dataclass(frozen=True)
 class Result:
     """Output instance from the GPT answer."""
 
     narrative: str
     question: str
     answer: str
-    pred: str
+    preds: list[Prediction]
     model_used: str
     timestamp: str
     cost: float
+
+    @property
+    def best_pred(self) -> Prediction:
+        return max(self.preds, key=lambda p: p.metrics.f1)
 
 
 def run_answer(
@@ -67,12 +77,21 @@ def run_answer(
             seed=0,
         )
 
-        result = response.choices[0].message.content
+        predictions: list[Prediction] = []
+        for output in response.choices:
+            result = output.message.content or "<empty>"
+            predictions.append(
+                Prediction(
+                    pred=result,
+                    metrics=metrics.calculate_sentence(gold=item.answer, pred=result),
+                )
+            )
         results.append(
             Result(
                 narrative=item.narrative,
                 question=item.question,
                 answer=item.answer,
+                preds=predictions,
                 model_used=model,
                 timestamp=datetime.now(UTC).isoformat(),
                 cost=calculate_cost(model, response),
@@ -179,8 +198,8 @@ def main(
     total_cost = sum(r.cost for r in data_answered)
     print("Total cost:", total_cost)
 
-    metric_result = metrics.calculate(
-        [metrics.Instance(gold=d.answer, pred=d.pred) for d in data_answered]
+    metric_result = metrics.calculate_dataset(
+        [metrics.Instance(gold=d.answer, pred=d.best_pred.pred) for d in data_answered]
     )
     print(render_metrics(metric_result))
 
