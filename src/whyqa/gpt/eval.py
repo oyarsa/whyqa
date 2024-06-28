@@ -139,11 +139,11 @@ def main(
 
     messages: list[tuple[str, str, bool]] = []
     for item in sampled_data:
-        story = f'Story: {item["narrative"]}'
-        question = f'Question: {item["question"]}'
+        story = f"Story: {item["narrative"]}"
+        question = f"Question: {item["question"]}"
         # TODO: Actually create and use a prediction
-        pred = f'Answer: {item["pred"]}'
-        gold = f'Gold: {item["answer"]}'
+        pred = f"Answer: {item["pred"]}"
+        gold = f"Gold: {item["answer"]}"
         valid = True
 
         display_msg = "\n\n".join([story, question, pred, gold]).strip()

@@ -26,8 +26,8 @@ def process_dataset(
         message = "\n\n".join(
             [
                 user_prompt,
-                f'Narrative: {item["narrative"]}',
-                f'Question: {item["question"]}',
+                f"Narrative: {item["narrative"]}",
+                f"Question: {item["question"]}",
             ]
         )
 
@@ -63,7 +63,7 @@ def process_dataset(
             answerable = item["is_ques_answerable_annotator"] == "Answerable"
             print(message)
             print(f"\nAnswerable: {answerable}")
-            print(f"\nAnswer: {item['answer']}")
+            print(f"\nAnswer: {item["answer"]}")
             print(f"\nGPT: '{result}'")
             print()
             print("-" * 80)
@@ -82,7 +82,7 @@ def init_client(api_type: str, config_from_type: dict[str, ClientConfig]) -> Ope
     config = config_from_type[api_type]
 
     if not api_type.startswith("openai"):
-        raise ValueError(f"Unknown API type: {config['api_type']}")
+        raise ValueError(f"Unknown API type: {config["api_type"]}")
 
     print("Using OpenAI API")
     return OpenAI(api_key=config["key"])
