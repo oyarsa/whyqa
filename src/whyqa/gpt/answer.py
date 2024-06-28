@@ -23,6 +23,7 @@ import inspect
 import io
 import json
 import random
+import subprocess
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -251,6 +252,28 @@ def get_args_() -> dict[str, str]:
     return result
 
 
+def get_current_commit_() -> str:
+    """Get the current commit hash, with "(dirty)" if the repo is dirty.
+
+    Note: impure function - runs shell commands.
+    Returns "unknown" if the git commands fail.
+    """
+    try:
+        git_hash = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"], text=True
+        ).strip()
+        # Output is non-empty if there are changes (dirty)
+        is_dirty = bool(
+            subprocess.check_output(["git", "status", "--porcelain"], text=True).strip()
+        )
+    except subprocess.CalledProcessError:
+        return "unknown"
+    else:
+        if is_dirty:
+            git_hash += " (dirty)"
+        return git_hash
+
+
 def render_args(args: dict[str, str]) -> str:
     """Render the arguments as a string."""
     return (
@@ -276,7 +299,7 @@ def main(
     num_outputs: int = typer.Option(1, min=1, help="Number of outputs to generate"),
     temperature: float = typer.Option(0, min=0, max=1, help="Temperature for GPT"),
 ) -> None:
-    args = get_args_()
+    args = get_args_() | {"commit": get_current_commit_()}
     print(render_args(args))
 
     dataset = load_dataset(file)
