@@ -1,17 +1,24 @@
+#!/usr/bin/env python3
 # pyright: basic
 import json
 import random
-from pathlib import Path
 from typing import Optional
 
 import typer
 
+DEFAULT_PROMPT = "Based on the story, answer the question."
 
-def main(infile: Path, n: Optional[int] = None, rand: bool = False) -> None:
-    prompt = "Based on the story, answer the question."
 
-    data = json.loads(infile.read_text())
+def main(
+    infile: typer.FileText,
+    n: Optional[int] = None,
+    rand: bool = False,
+    seed: int = 0,
+    prompt: str = DEFAULT_PROMPT,
+) -> None:
+    data = json.load(infile)
     if rand:
+        random.seed(seed)
         random.shuffle(data)
 
     for item in data[:n]:
@@ -26,4 +33,8 @@ def main(infile: Path, n: Optional[int] = None, rand: bool = False) -> None:
 
 
 if __name__ == "__main__":
-    typer.run(main)
+    app = typer.Typer(
+        context_settings={"help_option_names": ["-h", "--help"]}, add_completion=False
+    )
+    app.command()(main)
+    app()
