@@ -7,14 +7,13 @@ license = "GPL-3.0-only"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = ">=3.12"
 openai = ">=1.0,<2.0"
 pandas = ">=1.0,<2.0"
 readchar = ">=4.0,<5.0"
 scikit-learn = ">=1.0,<2.0"
 tqdm = ">=4.0,<5.0"
 typer = ">=0.9,<1.0"
-
 
 [build-system]
 requires = ["poetry-core"]

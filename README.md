@@ -11,7 +11,7 @@ python scripts/download_data.py
 
 ## Getting started
 
-This repository is tested with Python 3.11. We use [Poetry](https://python-poetry.org/)
+This repository is tested with Python 3.12. We use [Poetry](https://python-poetry.org/)
 to manage dependencies. To set up the project, run:
 
 ```sh
