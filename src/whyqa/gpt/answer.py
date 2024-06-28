@@ -113,6 +113,10 @@ def run_answer(
     Returns:
         Results for each entry in the dataset.
     """
+    assert not (
+        num_outputs > 0 and temperature == 0
+    ), "Temperature must be > 0 when num_outputs > 0"
+
     results: list[Result] = []
 
     for item in tqdm(dataset):
@@ -148,6 +152,7 @@ def run_answer(
                     metrics=metrics.calculate_sentence(gold=item.answer, pred=result),
                 )
             )
+
         results.append(
             Result(
                 narrative=item.narrative,
