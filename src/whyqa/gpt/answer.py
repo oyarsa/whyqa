@@ -73,6 +73,8 @@ def run_answer(
     system_prompt: str,
     user_prompt: str,
     dataset: list[Entry],
+    num_outputs: int,
+    temperature: float,
     print_messages: bool,
 ) -> list[Result]:
     results: list[Result] = []
@@ -92,12 +94,13 @@ def run_answer(
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": message},
             ],
-            temperature=0,
+            temperature=temperature,
             max_tokens=256,
             top_p=1,
             frequency_penalty=0,
             presence_penalty=0,
             seed=0,
+            n=num_outputs,
         )
 
         predictions: list[Prediction] = []
@@ -221,6 +224,8 @@ def main(
     include_unanswerable: bool = typer.Option(
         False, help="Include unanswerable questions"
     ),
+    num_outputs: int = typer.Option(1, min=1, help="Number of outputs to generate"),
+    temperature: float = typer.Option(0, min=0, max=1, help="Temperature for GPT"),
 ) -> None:
     print(get_args())
 
@@ -234,6 +239,9 @@ def main(
     client = init_client(key_name, json.load(key_file))
     dataset = dataset[:n]
 
+    if num_outputs > 0 and temperature == 0:
+        raise ValueError("Temperature must be greater than 0 when num_outputs > 0")
+
     data_answered = run_answer(
         client,
         model,
@@ -241,6 +249,8 @@ def main(
         USER_PROMPTS[user_prompt],
         dataset,
         print_messages,
+        num_outputs=num_outputs,
+        temperature=temperature,
     )
 
     print("Model used:", data_answered[0].model_used)
