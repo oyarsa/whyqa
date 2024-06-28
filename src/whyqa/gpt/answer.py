@@ -1,3 +1,24 @@
+"""Use GPT to answer why-questions from the TellMeWhy dataset.
+
+The input is a JSON file with the following format:
+- answer (str): The answer to the question
+- narrative (str): The story
+- question (str): The question asked
+- is_ques_answerable_annotator (str): Whether the question is answerable. Can be
+  either 'Answerable' or 'Unanswerable'.
+
+See the `dataset` directory for examples.
+
+The key file is a JSON file where the keys are names of keys, and the values are
+objects with the following format:
+- api_type (str): The type of API to use. Currently only 'openai' is supported.
+- key (str): The API key.
+
+Two files are created in the output directory:
+- output.json: The results of the GPT model
+- metrics.json: The metrics calculated for the results
+"""
+
 import json
 import random
 from dataclasses import asdict, dataclass
@@ -176,26 +197,6 @@ def main(
         False, help="Include unanswerable questions"
     ),
 ) -> None:
-    """Use GPT to answer why-questions from the TellMeWhy dataset.
-
-    The input is a JSON file with the following format:
-    - answer (str): The answer to the question
-    - narrative (str): The story
-    - question (str): The question asked
-    - is_ques_answerable_annotator (str): Whether the question is answerable. Can be
-      either 'Answerable' or 'Unanswerable'.
-
-    See the `dataset` directory for examples.
-
-    The key file is a JSON file where the keys are names of keys, and the values are
-    objects with the following format:
-    - api_type (str): The type of API to use. Currently only 'openai' is supported.
-    - key (str): The API key.
-
-    Two files are created in the output directory:
-    - output.json: The results of the GPT model
-    - metrics.json: The metrics calculated for the results
-    """
     dataset = load_dataset(file)
     if not include_unanswerable:
         dataset = [d for d in dataset if d.is_ques_answerable_annotator == "Answerable"]
@@ -242,5 +243,6 @@ if __name__ == "__main__":
         add_completion=False,
         rich_markup_mode="rich",
     )
+    main.__doc__ = __doc__
     app.command()(main)
     app()
