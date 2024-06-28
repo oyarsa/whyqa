@@ -3,7 +3,7 @@ import random
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import TextIO, TypedDict
 
 import typer
 from openai import OpenAI
@@ -11,6 +11,14 @@ from tqdm import tqdm
 
 from whyqa import metrics
 from whyqa.gpt.eval import calculate_cost
+
+
+@dataclass(frozen=True)
+class Entry:
+    answer: str
+    narrative: str
+    question: str
+    is_ques_answerable_annotator: str
 
 
 @dataclass(frozen=True)
@@ -31,7 +39,7 @@ def run_answer(
     model: str,
     system_prompt: str,
     user_prompt: str,
-    dataset: list[dict[str, Any]],
+    dataset: list[Entry],
     print_messages: bool,
 ) -> list[Result]:
     results: list[Result] = []
@@ -40,8 +48,8 @@ def run_answer(
         message = "\n\n".join(
             [
                 user_prompt,
-                f"Narrative: {item["narrative"]}",
-                f"Question: {item["question"]}",
+                f"Narrative: {item.narrative}",
+                f"Question: {item.question}",
             ]
         )
 
@@ -62,10 +70,9 @@ def run_answer(
         result = response.choices[0].message.content
         results.append(
             Result(
-                narrative=item["narrative"],
-                question=item["question"],
-                answer=item["answer"],
-                pred=result or "<empty>",
+                narrative=item.narrative,
+                question=item.question,
+                answer=item.answer,
                 model_used=model,
                 timestamp=datetime.now(UTC).isoformat(),
                 cost=calculate_cost(model, response),
@@ -73,11 +80,13 @@ def run_answer(
         )
 
         if print_messages:
-            answerable = item["is_ques_answerable_annotator"] == "Answerable"
+            answerable = item.is_ques_answerable_annotator == "Answerable"
             print(message)
             print(f"\nAnswerable: {answerable}")
-            print(f"\nAnswer: {item["answer"]}")
-            print(f"\nGPT: '{result}'")
+            print(f"\nAnswer: {item.answer}")
+            print("\nGPT:")
+            for i, prediction in enumerate(predictions, start=1):
+                print(f"  {i}) {prediction.pred}")
             print()
             print("-" * 80)
             print()
@@ -120,6 +129,18 @@ in the text. The response should be just the answer, nothing else.""",
 }
 
 
+def load_dataset(file: TextIO) -> list[Entry]:
+    return [
+        Entry(
+            answer=d["answer"],
+            narrative=d["narrative"],
+            question=d["question"],
+            is_ques_answerable_annotator=d["is_ques_answerable_annotator"],
+        )
+        for d in json.load(file)
+    ]
+
+
 def main(
     file: typer.FileText = typer.Argument(..., help="Input JSON file"),
     output: Path = typer.Argument(..., help="Path to output JSON file"),
@@ -135,11 +156,9 @@ def main(
         False, help="Include unanswerable questions"
     ),
 ) -> None:
-    dataset = json.load(file)
+    dataset = load_dataset(file)
     if not include_unanswerable:
-        dataset = [
-            d for d in dataset if d["is_ques_answerable_annotator"] == "Answerable"
-        ]
+        dataset = [d for d in dataset if d.is_ques_answerable_annotator == "Answerable"]
     if rand:
         random.shuffle(dataset)
 
