@@ -147,7 +147,7 @@ def main(
     model: str = typer.Argument(..., help="Model to use"),
     key_file: typer.FileText = typer.Argument(..., help="Path to API key file"),
     key_name: str = typer.Argument(..., help="API key name"),
-    n: int = typer.Option(10, help="Number of samples to process"),
+    n: int = typer.Option(10, min=1, help="Number of samples to process"),
     rand: bool = typer.Option(False, help="Randomise the dataset"),
     system_prompt: str = typer.Option("simple", help="System prompt to use"),
     user_prompt: str = typer.Option("simple", help="User prompt to use"),
@@ -162,8 +162,6 @@ def main(
     if rand:
         random.shuffle(dataset)
 
-    if n <= 0:
-        raise ValueError("Number of samples must be greater than 0")
     dataset = dataset[:n]
 
     client = init_client(key_name, json.load(key_file))
