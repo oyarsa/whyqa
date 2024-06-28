@@ -9,6 +9,7 @@ import typer
 from openai import OpenAI
 from tqdm import tqdm
 
+from whyqa import metric
 from whyqa.gpt.eval import calculate_cost
 
 
@@ -100,6 +101,13 @@ def init_client(api_type: str, config_from_type: dict[str, ClientConfig]) -> Ope
     return OpenAI(api_key=config["key"])
 
 
+def render_metrics(results: dict[str, float]) -> str:
+    """Render metrics as a string."""
+    return ">>> METRICS\n" + "\n".join(
+        f"  {key}: {value:.4f}" for key, value in results.items()
+    )
+
+
 SYSTEM_PROMPTS = {
     "simple": """You are a helpful assistant that can answer questions about why \
 things happen."""
@@ -139,7 +147,6 @@ def main(
 
     client = OpenAI(api_key=key_file.read_text().strip())
 
-    processed_data, total_cost = process_dataset(
     data_answered = run_answer(
         client,
         model,
@@ -153,6 +160,10 @@ def main(
     total_cost = sum(r.cost for r in data_answered)
     print("Total cost:", total_cost)
 
+    metric_result = metric.calculate(
+        [metric.Instance(gold=d.answer, pred=d.pred) for d in data_answered]
+    )
+    print(render_metrics(metric_result))
     with (output.parent / "cost.csv").open("a") as f:
         ts = datetime.now(UTC).isoformat()
         f.write(f"{ts},{total_cost}\n")
