@@ -72,6 +72,21 @@ class Result:
         return max(self.preds, key=lambda p: p.metrics.f1)
 
 
+def render_message(item: Entry, message: str, predictions: list[Prediction]) -> str:
+    return "\n".join(
+        [
+            message,
+            f"\nAnswerable: {item.answerable}",
+            f"\nAnswer: {item.answer}",
+            "\nGPT:",
+            *(f"  {i}) {p.pred}" for i, p in enumerate(predictions, start=1)),
+            "",
+            "-" * 80,
+            "",
+        ]
+    )
+
+
 def run_answer(
     *,
     client: OpenAI,
@@ -146,16 +161,7 @@ def run_answer(
         )
 
         if print_messages:
-            answerable = item.is_ques_answerable_annotator == "Answerable"
-            print(message)
-            print(f"\nAnswerable: {answerable}")
-            print(f"\nAnswer: {item.answer}")
-            print("\nGPT:")
-            for i, prediction in enumerate(predictions, start=1):
-                print(f"  {i}) {prediction.pred}")
-            print()
-            print("-" * 80)
-            print()
+            print(render_message(item, message, predictions))
 
     return results
 
