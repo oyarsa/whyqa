@@ -149,6 +149,7 @@ def main(
     key_name: str = typer.Argument(..., help="API key name"),
     n: int = typer.Option(10, min=1, help="Number of samples to process"),
     rand: bool = typer.Option(False, help="Randomise the dataset"),
+    seed: int = typer.Option(0, help="Seed for randomisation"),
     system_prompt: str = typer.Option("simple", help="System prompt to use"),
     user_prompt: str = typer.Option("simple", help="User prompt to use"),
     print_messages: bool = typer.Option(False, help="Print messages sent to API"),
@@ -160,11 +161,12 @@ def main(
     if not include_unanswerable:
         dataset = [d for d in dataset if d.is_ques_answerable_annotator == "Answerable"]
     if rand:
+        random.seed(seed)
         random.shuffle(dataset)
 
+    client = init_client(key_name, json.load(key_file))
     dataset = dataset[:n]
 
-    client = init_client(key_name, json.load(key_file))
     data_answered = run_answer(
         client,
         model,
