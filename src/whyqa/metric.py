@@ -12,6 +12,14 @@ class Instance:
     pred: str
 
 
+@dataclass(frozen=True)
+class Result:
+    precision: float
+    recall: float
+    f1: float
+    em: float
+
+
 def _get_tokens(s: str) -> list[str]:
     """Lower text, remove punctuation, articles and split by whitespace."""
     s = s.casefold()
@@ -22,7 +30,7 @@ def _get_tokens(s: str) -> list[str]:
     return s.split()
 
 
-def calculate(instances: list[Instance]) -> dict[str, float]:
+def calculate(instances: list[Instance]) -> Result:
     """Calculate token-level precision, recall and F1 scores, and Exact Match."""
     gold_len = 0
     pred_len = 0
@@ -50,4 +58,4 @@ def calculate(instances: list[Instance]) -> dict[str, float]:
     )
     em = equal_count / len(instances)
 
-    return {"precision": precision, "recall": recall, "f1": f1, "em": em}
+    return Result(precision=precision, recall=recall, f1=f1, em=em)

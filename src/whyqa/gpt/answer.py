@@ -101,10 +101,10 @@ def init_client(api_type: str, config_from_type: dict[str, ClientConfig]) -> Ope
     return OpenAI(api_key=config["key"])
 
 
-def render_metrics(results: dict[str, float]) -> str:
+def render_metrics(results: metric.Result) -> str:
     """Render metrics as a string."""
     return ">>> METRICS\n" + "\n".join(
-        f"  {key}: {value:.4f}" for key, value in results.items()
+        f"  {key}: {value:.4f}" for key, value in asdict(results).items()
     )
 
 
@@ -168,7 +168,7 @@ def main(
     output.parent.mkdir(exist_ok=True, parents=True)
     output.write_text(json.dumps([asdict(d) for d in data_answered], indent=2))
     output.with_stem(f"{output.stem}_metrics").write_text(
-        json.dumps(metric_result, indent=2)
+        json.dumps(asdict(metric_result), indent=2)
     )
 
     with (output.parent / "cost.csv").open("a") as f:
