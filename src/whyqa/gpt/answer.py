@@ -124,7 +124,8 @@ def main(
     file: typer.FileText = typer.Argument(..., help="Input JSON file"),
     output: Path = typer.Argument(..., help="Path to output JSON file"),
     model: str = typer.Argument(..., help="Model to use"),
-    key_file: Path = typer.Argument(..., help="Path to API key file"),
+    key_file: typer.FileText = typer.Argument(..., help="Path to API key file"),
+    key_name: str = typer.Argument(..., help="API key name"),
     n: int = typer.Option(10, help="Number of samples to process"),
     rand: bool = typer.Option(False, help="Randomise the dataset"),
     system_prompt: str = typer.Option("simple", help="System prompt to use"),
@@ -145,8 +146,7 @@ def main(
     n = n if n > 0 else len(dataset)
     dataset = dataset[:n]
 
-    client = OpenAI(api_key=key_file.read_text().strip())
-
+    client = init_client(key_name, json.load(key_file))
     data_answered = run_answer(
         client,
         model,
