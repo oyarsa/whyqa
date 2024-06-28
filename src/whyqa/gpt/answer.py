@@ -68,6 +68,7 @@ class Result:
 
 
 def run_answer(
+    *,
     client: OpenAI,
     model: str,
     system_prompt: str,
@@ -243,14 +244,14 @@ def main(
         raise ValueError("Temperature must be greater than 0 when num_outputs > 0")
 
     data_answered = run_answer(
-        client,
-        model,
-        SYSTEM_PROMPTS[system_prompt],
-        USER_PROMPTS[user_prompt],
-        dataset,
-        print_messages,
+        client=client,
+        model=model,
+        system_prompt=SYSTEM_PROMPTS[system_prompt],
+        user_prompt=USER_PROMPTS[user_prompt],
+        dataset=dataset,
         num_outputs=num_outputs,
         temperature=temperature,
+        print_messages=print_messages,
     )
 
     print("Model used:", data_answered[0].model_used)
