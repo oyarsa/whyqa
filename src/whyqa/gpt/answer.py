@@ -9,7 +9,7 @@ import typer
 from openai import OpenAI
 from tqdm import tqdm
 
-from whyqa import metric
+from whyqa import metrics
 from whyqa.gpt.eval import calculate_cost
 
 
@@ -101,7 +101,7 @@ def init_client(api_type: str, config_from_type: dict[str, ClientConfig]) -> Ope
     return OpenAI(api_key=config["key"])
 
 
-def render_metrics(results: metric.Result) -> str:
+def render_metrics(results: metrics.Result) -> str:
     """Render metrics as a string."""
     return ">>> METRICS\n" + "\n".join(
         f"  {key}: {value:.4f}" for key, value in asdict(results).items()
@@ -160,8 +160,8 @@ def main(
     total_cost = sum(r.cost for r in data_answered)
     print("Total cost:", total_cost)
 
-    metric_result = metric.calculate(
-        [metric.Instance(gold=d.answer, pred=d.pred) for d in data_answered]
+    metric_result = metrics.calculate(
+        [metrics.Instance(gold=d.answer, pred=d.pred) for d in data_answered]
     )
     print(render_metrics(metric_result))
 
