@@ -17,6 +17,9 @@ MODEL_COSTS = {
         0.000002,
     ),
     "gpt-4": (0.00003, 0.00006),  # in: $0.03 / 1K tokens, out: $0.06 / 1K tokens
+    # prices per 1M tokens
+    "gpt-4o-2024-05-13": (5 / 1e6, 15 / 1e6),
+    "gpt-3.5-turbo-0125": (0.5 / 1e6, 1.5 / 1e6),
 }
 
 
