@@ -73,6 +73,20 @@ class Result:
         return max(self.preds, key=lambda p: p.metrics.f1)
 
 
+@dataclass(frozen=True)
+class ResultSingle:
+    """Output instance a single GPT prediction."""
+
+    narrative: str
+    question: str
+    answer: str
+    pred: str
+    f1: float
+    em: float
+    precision: float
+    recall: float
+
+
 def render_message(item: Entry, message: str, predictions: list[Prediction]) -> str:
     return "\n".join(
         [
@@ -325,9 +339,24 @@ def main(
         temperature=temperature,
         print_messages=print_messages,
     )
+    data_best = [
+        ResultSingle(
+            narrative=d.narrative,
+            question=d.question,
+            answer=d.answer,
+            pred=d.best_pred.pred,
+            f1=d.best_pred.metrics.f1,
+            em=d.best_pred.metrics.em,
+            precision=d.best_pred.metrics.precision,
+            recall=d.best_pred.metrics.recall,
+        )
+        for d in data_answered
+    ]
 
+    print()
     print("Model used:", data_answered[0].model_used)
     print("Total cost:", sum(r.cost for r in data_answered))
+    print()
 
     metric_result = metrics.calculate_dataset(
         [metrics.Instance(gold=d.answer, pred=d.best_pred.pred) for d in data_answered]
@@ -338,10 +367,15 @@ def main(
     (output_dir / "output.json").write_text(
         json.dumps([asdict(d) for d in data_answered], indent=2)
     )
+    (output_dir / "output_best.json").write_text(
+        json.dumps([asdict(d) for d in data_best], indent=2)
+    )
     (output_dir / "metrics.json").write_text(
         json.dumps(asdict(metric_result), indent=2)
     )
     (output_dir / "config.json").write_text(json.dumps(args, indent=2))
+
+    print("\nResults written to:", output_dir)
 
 
 if __name__ == "__main__":
