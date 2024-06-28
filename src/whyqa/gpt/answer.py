@@ -38,6 +38,8 @@ from whyqa.gpt.eval import calculate_cost
 
 @dataclass(frozen=True)
 class Entry:
+    """Input entry from the TellMeWhy dataset."""
+
     answer: str
     narrative: str
     question: str
@@ -46,13 +48,15 @@ class Entry:
 
 @dataclass(frozen=True)
 class Prediction:
+    """Single GPT prediction."""
+
     pred: str
     metrics: metrics.Result
 
 
 @dataclass(frozen=True)
 class Result:
-    """Output instance from the GPT answer."""
+    """Output instance from with all GPT predictions."""
 
     narrative: str
     question: str
@@ -64,6 +68,7 @@ class Result:
 
     @property
     def best_pred(self) -> Prediction:
+        """Get best prediction based on F1 score."""
         return max(self.preds, key=lambda p: p.metrics.f1)
 
 
@@ -78,6 +83,21 @@ def run_answer(
     temperature: float,
     print_messages: bool,
 ) -> list[Result]:
+    """Run GPT on the dataset.
+
+    Args:
+        client: Initialise OpenAI client.
+        model: OpenAI model to use (e.g. "gpt-3.5-turbo-0125").
+        system_prompt: System prompt to use.
+        user_prompt: User prompt to use (filled in, no templates).
+        dataset: List of entries to process.
+        num_outputs: Number of outputs that the model should generate.
+        temperature: Temperature for GPT sampling. If num_outputs > 0, this cannot be 0.
+        print_messages: Whether to print messages sent to the API.
+
+    Returns:
+        Results for each entry in the dataset.
+    """
     results: list[Result] = []
 
     for item in tqdm(dataset):
@@ -146,7 +166,7 @@ class ClientConfig(TypedDict):
 
 
 def init_client(api_type: str, config_from_type: dict[str, ClientConfig]) -> OpenAI:
-    """Create client for OpenAI API."""
+    """Create client for OpenAI API from the config file."""
     config = config_from_type[api_type]
 
     if not api_type.startswith("openai"):
@@ -176,6 +196,10 @@ in the text. The response should be just the answer, nothing else.""",
 
 
 def load_dataset(file: TextIO) -> list[Entry]:
+    """Load dataset from (opened) JSON file.
+
+    See module docstring for the JSON format.
+    """
     return [
         Entry(
             answer=d["answer"],
@@ -187,8 +211,16 @@ def load_dataset(file: TextIO) -> list[Entry]:
     ]
 
 
-def get_args() -> str | None:
-    """Print arguments of the current function."""
+def get_args_() -> str | None:
+    """Render arguments of the current function.
+
+    It does this by getting the frame of the caller and extracting the arguments.
+    Arguments of type `io.TextIOWrapper` are converted to their `name` attribute.
+
+    Returns:
+        A rendered string of the arguments, ready to be printed. If there is
+        trouble getting the frame, returns None.
+    """
     current_frame = inspect.currentframe()
     if current_frame is None:
         return None
@@ -228,7 +260,7 @@ def main(
     num_outputs: int = typer.Option(1, min=1, help="Number of outputs to generate"),
     temperature: float = typer.Option(0, min=0, max=1, help="Temperature for GPT"),
 ) -> None:
-    print(get_args())
+    print(get_args_())
 
     dataset = load_dataset(file)
     if not include_unanswerable:
