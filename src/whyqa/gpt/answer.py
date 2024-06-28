@@ -143,7 +143,8 @@ def main(
     if rand:
         random.shuffle(dataset)
 
-    n = n if n > 0 else len(dataset)
+    if n <= 0:
+        raise ValueError("Number of samples must be greater than 0")
     dataset = dataset[:n]
 
     client = init_client(key_name, json.load(key_file))
