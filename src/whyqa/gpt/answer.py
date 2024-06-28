@@ -8,7 +8,7 @@ import typer
 from openai import OpenAI
 from tqdm import tqdm
 
-from whyqa.gpt.gpt_eval import calculate_cost
+from whyqa.gpt.eval import calculate_cost
 
 
 def process_dataset(
