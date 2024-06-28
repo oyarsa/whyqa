@@ -43,7 +43,7 @@ class Entry:
     answer: str
     narrative: str
     question: str
-    is_ques_answerable_annotator: str
+    answerable: bool
 
 
 @dataclass(frozen=True)
@@ -205,7 +205,7 @@ def load_dataset(file: TextIO) -> list[Entry]:
             answer=d["answer"],
             narrative=d["narrative"],
             question=d["question"],
-            is_ques_answerable_annotator=d["is_ques_answerable_annotator"],
+            answerable=d["is_ques_answerable_annotator"] == "Answerable",
         )
         for d in json.load(file)
     ]
@@ -239,6 +239,7 @@ def get_args_() -> str | None:
         else:
             value_str = str(value)
         out.append(f"  {arg}: {value_str}")
+
     return "\n".join(out) + "\n"
 
 
