@@ -162,8 +162,8 @@ def load_dataset(file: TextIO) -> list[Entry]:
 
 def main(
     file: typer.FileText = typer.Argument(..., help="Input JSON file"),
-    output: Path = typer.Argument(..., help="Path to output JSON file"),
-    model: str = typer.Argument(..., help="Model to use"),
+    output_dir: Path = typer.Argument(..., help="Path to output directory"),
+    model: str = typer.Argument(..., help="OpenAI model to use"),
     key_file: typer.FileText = typer.Argument(..., help="Path to API key file"),
     key_name: str = typer.Argument(..., help="API key name"),
     n: int = typer.Option(10, min=1, help="Number of samples to process"),
@@ -203,13 +203,15 @@ def main(
     )
     print(render_metrics(metric_result))
 
-    output.parent.mkdir(exist_ok=True, parents=True)
-    output.write_text(json.dumps([asdict(d) for d in data_answered], indent=2))
-    output.with_stem(f"{output.stem}_metrics").write_text(
+    output_dir.mkdir(exist_ok=True, parents=True)
+    (output_dir / "output.json").write_text(
+        json.dumps([asdict(d) for d in data_answered], indent=2)
+    )
+    (output_dir / "metrics.json").write_text(
         json.dumps(asdict(metric_result), indent=2)
     )
 
-    with (output.parent / "cost.csv").open("a") as f:
+    with (output_dir / "cost.csv").open("a") as f:
         ts = datetime.now(UTC).isoformat()
         f.write(f"{ts},{total_cost}\n")
 
