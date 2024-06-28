@@ -115,7 +115,7 @@ def run_answer(
                 question=item.question,
                 answer=item.answer,
                 preds=predictions,
-                model_used=model,
+                model_used=response.model,
                 timestamp=datetime.now(UTC).isoformat(),
                 cost=calculate_cost(model, response),
             )
@@ -243,8 +243,8 @@ def main(
         print_messages,
     )
 
-    total_cost = sum(r.cost for r in data_answered)
-    print("Total cost:", total_cost)
+    print("Model used:", data_answered[0].model_used)
+    print("Total cost:", sum(r.cost for r in data_answered))
 
     metric_result = metrics.calculate_dataset(
         [metrics.Instance(gold=d.answer, pred=d.best_pred.pred) for d in data_answered]
@@ -262,7 +262,7 @@ def main(
 
     with (output_dir / "cost.csv").open("a") as f:
         ts = datetime.now(UTC).isoformat()
-        f.write(f"{ts},{total_cost}\n")
+        f.write(f"{ts},{sum(r.cost for r in data_answered)}\n")
 
 
 if __name__ == "__main__":
