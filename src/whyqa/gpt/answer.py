@@ -19,6 +19,8 @@ Two files are created in the output directory:
 - metrics.json: The metrics calculated for the results
 """
 
+import inspect
+import io
 import json
 import random
 from dataclasses import asdict, dataclass
@@ -181,6 +183,29 @@ def load_dataset(file: TextIO) -> list[Entry]:
     ]
 
 
+def get_args() -> str | None:
+    """Print arguments of the current function."""
+    current_frame = inspect.currentframe()
+    if current_frame is None:
+        return None
+
+    frame = current_frame.f_back
+    if frame is None:
+        return None
+
+    args, _, _, local_vars = inspect.getargvalues(frame)
+
+    out = [">>> ARGS:"]
+    for arg in args:
+        value = local_vars[arg]
+        if isinstance(value, io.TextIOWrapper):
+            value_str = value.name
+        else:
+            value_str = str(value)
+        out.append(f"  {arg}: {value_str}")
+    return "\n".join(out) + "\n"
+
+
 def main(
     file: typer.FileText = typer.Argument(..., help="Input JSON file"),
     output_dir: Path = typer.Argument(..., help="Path to output directory"),
@@ -197,6 +222,8 @@ def main(
         False, help="Include unanswerable questions"
     ),
 ) -> None:
+    print(get_args())
+
     dataset = load_dataset(file)
     if not include_unanswerable:
         dataset = [d for d in dataset if d.is_ques_answerable_annotator == "Answerable"]
@@ -231,6 +258,7 @@ def main(
     (output_dir / "metrics.json").write_text(
         json.dumps(asdict(metric_result), indent=2)
     )
+    print("\nFiles saved to:", output_dir)
 
     with (output_dir / "cost.csv").open("a") as f:
         ts = datetime.now(UTC).isoformat()
@@ -242,6 +270,7 @@ if __name__ == "__main__":
         context_settings={"help_option_names": ["-h", "--help"]},
         add_completion=False,
         rich_markup_mode="rich",
+        pretty_exceptions_show_locals=False,
     )
     main.__doc__ = __doc__
     app.command()(main)
