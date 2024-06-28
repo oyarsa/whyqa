@@ -31,7 +31,7 @@ def _get_tokens(s: str) -> list[str]:
 
 
 def calculate_dataset(instances: list[Instance]) -> Result:
-    """Calculate token-level precision, recall and F1 scores, and Exact Match."""
+    """Calculate dataset token-level precision, recall and F1 scores, and Exact Match."""
     gold_len = 0
     pred_len = 0
     common_tokens = 0
@@ -62,6 +62,7 @@ def calculate_dataset(instances: list[Instance]) -> Result:
 
 
 def calculate_sentence(gold: str, pred: str) -> Result:
+    """Calculate sentence token precision, recall and F1 scores, and Exact Match."""
     gold_toks = _get_tokens(gold)
     pred_toks = _get_tokens(pred)
 
