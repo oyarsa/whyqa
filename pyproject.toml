@@ -12,6 +12,7 @@ dependencies = [
     "scikit-learn<2.0,>=1.0",
     "tqdm<5.0,>=4.0",
     "typer<1.0,>=0.9",
+    "pandas-stubs>=2.2.2.240603",
 ]
 requires-python = ">=3.12"
 readme = "README.md"
