@@ -325,6 +325,5 @@ if __name__ == "__main__":
         rich_markup_mode="rich",
         pretty_exceptions_show_locals=False,
     )
-    main.__doc__ = __doc__
-    app.command()(main)
+    app.command(help=__doc__)(main)
     app()
