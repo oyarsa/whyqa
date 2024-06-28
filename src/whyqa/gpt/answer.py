@@ -255,23 +255,21 @@ def main(
     system_prompt: str = typer.Option("simple", help="System prompt to use"),
     user_prompt: str = typer.Option("simple", help="User prompt to use"),
     print_messages: bool = typer.Option(False, help="Print messages sent to API"),
-    include_unanswerable: bool = typer.Option(
-        False, help="Include unanswerable questions"
-    ),
+    answerable_only: bool = typer.Option(True, help="Include only aswerable questions"),
     num_outputs: int = typer.Option(1, min=1, help="Number of outputs to generate"),
     temperature: float = typer.Option(0, min=0, max=1, help="Temperature for GPT"),
 ) -> None:
     print(get_args_())
 
     dataset = load_dataset(file)
-    if not include_unanswerable:
-        dataset = [d for d in dataset if d.is_ques_answerable_annotator == "Answerable"]
+    if answerable_only:
+        dataset = [d for d in dataset if d.answerable]
     if rand:
         random.seed(seed)
         random.shuffle(dataset)
+    dataset = dataset[:n]
 
     client = init_client(key_name, json.load(key_file))
-    dataset = dataset[:n]
 
     if num_outputs > 0 and temperature == 0:
         raise ValueError("Temperature must be greater than 0 when num_outputs > 0")
