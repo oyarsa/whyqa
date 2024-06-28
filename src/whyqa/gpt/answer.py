@@ -155,8 +155,7 @@ def main(
         dataset,
         print_messages,
     )
-    output.parent.mkdir(exist_ok=True, parents=True)
-    output.write_text(json.dumps(processed_data, indent=4))
+
     total_cost = sum(r.cost for r in data_answered)
     print("Total cost:", total_cost)
 
@@ -164,6 +163,13 @@ def main(
         [metric.Instance(gold=d.answer, pred=d.pred) for d in data_answered]
     )
     print(render_metrics(metric_result))
+
+    output.parent.mkdir(exist_ok=True, parents=True)
+    output.write_text(json.dumps([asdict(d) for d in data_answered], indent=2))
+    output.with_stem(f"{output.stem}_metrics").write_text(
+        json.dumps(metric_result, indent=2)
+    )
+
     with (output.parent / "cost.csv").open("a") as f:
         ts = datetime.now(UTC).isoformat()
         f.write(f"{ts},{total_cost}\n")
