@@ -1,14 +1,14 @@
-# pyright: basic
 import json
 import random
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, TypedDict
 
 import typer
-from whyqa.gpt_eval.gpt_eval import calculate_cost
 from openai import OpenAI
 from tqdm import tqdm
+
+from whyqa.gpt.gpt_eval import calculate_cost
 
 
 def process_dataset(
@@ -53,7 +53,7 @@ def process_dataset(
                 "answer": item["answer"],
                 "pred": result,
                 "model_used": model,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
         )
 
@@ -140,7 +140,7 @@ def main(
     print("Total cost:", total_cost)
 
     with (output.parent / "cost.csv").open("a") as f:
-        ts = datetime.now(timezone.utc).isoformat()
+        ts = datetime.now(UTC).isoformat()
         f.write(f"{ts},{total_cost}\n")
 
 
