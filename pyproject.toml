@@ -1,20 +1,25 @@
-[tool.poetry]
+[project]
 name = "whyqa"
 version = "0.1.0"
-description = ""
-authors = ["Italo Silva <italo@maleldil.com>"]
-license = "GPL-3.0-only"
+description = "Answer Why Questions"
+authors = [
+    {name = "Italo Silva", email = "italo@maleldil.com"},
+]
+dependencies = [
+    "openai<2.0,>=1.0",
+    "pandas<3.0,>=2.0",
+    "readchar<5.0,>=4.0",
+    "scikit-learn<2.0,>=1.0",
+    "tqdm<5.0,>=4.0",
+    "typer<1.0,>=0.9",
+]
+requires-python = ">=3.12"
 readme = "README.md"
+license = {text = "GPL-3.0-only"}
 
-[tool.poetry.dependencies]
-python = ">=3.12"
-openai = ">=1.0,<2.0"
-pandas = ">=1.0,<2.0"
-readchar = ">=4.0,<5.0"
-scikit-learn = ">=1.0,<2.0"
-tqdm = ">=4.0,<5.0"
-typer = ">=0.9,<1.0"
+[tool.pdm]
+distribution = true
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
