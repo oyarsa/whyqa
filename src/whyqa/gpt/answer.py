@@ -88,18 +88,16 @@ class ResultSingle:
 
 
 def render_message(item: Entry, message: str, predictions: list[Prediction]) -> str:
-    return "\n".join(
-        [
-            message,
-            f"\nAnswerable: {item.answerable}",
-            f"\nAnswer: {item.answer}",
-            "\nGPT:",
-            *(f"  {i}) {p.pred}" for i, p in enumerate(predictions, start=1)),
-            "",
-            "-" * 80,
-            "",
-        ]
-    )
+    return "\n".join([
+        message,
+        f"\nAnswerable: {item.answerable}",
+        f"\nAnswer: {item.answer}",
+        "\nGPT:",
+        *(f"  {i}) {p.pred}" for i, p in enumerate(predictions, start=1)),
+        "",
+        "-" * 80,
+        "",
+    ])
 
 
 def run_answer(
@@ -135,13 +133,11 @@ def run_answer(
     results: list[Result] = []
 
     for item in tqdm(dataset):
-        message = "\n\n".join(
-            [
-                user_prompt,
-                f"Narrative: {item.narrative}",
-                f"Question: {item.question}",
-            ]
-        )
+        message = "\n\n".join([
+            user_prompt,
+            f"Narrative: {item.narrative}",
+            f"Question: {item.question}",
+        ])
 
         response = client.chat.completions.create(
             model=model,
@@ -358,9 +354,9 @@ def main(
     print("Total cost:", sum(r.cost for r in data_answered))
     print()
 
-    metric_result = metrics.calculate_dataset(
-        [metrics.Instance(gold=d.answer, pred=d.best_pred.pred) for d in data_answered]
-    )
+    metric_result = metrics.calculate_dataset([
+        metrics.Instance(gold=d.answer, pred=d.best_pred.pred) for d in data_answered
+    ])
     print(render_metrics(metric_result))
 
     output_dir.mkdir(exist_ok=True, parents=True)

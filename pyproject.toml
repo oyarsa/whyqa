@@ -56,6 +56,9 @@ ignore = [
     "ISC001"    # Incompatible with the formatter
 ]
 
+[tool.ruff.format]
+preview = true
+
 [tool.pyright]
 # Ruff also handles this, and it needs to be enabled there for fixAll to fix it,
 # so we disable it here to avoid duplicate errors

@@ -150,9 +150,12 @@ def main(
         valid = True
 
         display_msg = "\n\n".join([story, question, pred, gold]).strip()
-        gpt_msg = "\n\n".join(
-            [USER_PROMPTS[user_prompt], story, question, pred]
-        ).strip()
+        gpt_msg = "\n\n".join([
+            USER_PROMPTS[user_prompt],
+            story,
+            question,
+            pred,
+        ]).strip()
         messages.append((display_msg, gpt_msg, valid))
 
     client = OpenAI(api_key=api_key)

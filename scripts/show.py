@@ -22,9 +22,9 @@ def main(
         random.shuffle(data)
 
     for item in data[:n]:
-        story = f"Story: {item['narrative']}"
-        question = f"Question: {item['question']}"
-        gold = f"Gold: {item['answer']}"
+        story = f"Story: {item["narrative"]}"
+        question = f"Question: {item["question"]}"
+        gold = f"Gold: {item["answer"]}"
         answerable = f'Answerable: {item["is_ques_answerable_annotator"]}'
         full = "\n\n".join([prompt, story, question, gold, answerable])
         print(full)
