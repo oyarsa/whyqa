@@ -226,4 +226,11 @@ def main(
 
 
 if __name__ == "__main__":
-    typer.run(main)
+    app = typer.Typer(
+        context_settings={"help_option_names": ["-h", "--help"]},
+        add_completion=False,
+        rich_markup_mode="rich",
+        pretty_exceptions_show_locals=False,
+    )
+    app.command(help=__doc__)(main)
+    app()
