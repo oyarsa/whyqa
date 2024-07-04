@@ -234,8 +234,9 @@ def main(
         pred = f"Answer: {item.pred}"
         gold = f"Gold: {item.answer}"
         valid = item.valid
+        valid_msg = f"Valid: {valid}"
 
-        display_msg = "\n\n".join([story, question, pred, gold]).strip()
+        display_msg = "\n\n".join([story, question, pred, gold, valid_msg]).strip()
         gpt_msg = "\n\n".join([
             USER_PROMPTS[user_prompt],
             story,
