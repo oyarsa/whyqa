@@ -4,6 +4,7 @@
 import abc
 import json
 import random
+import warnings
 from collections import defaultdict
 from dataclasses import asdict, dataclass
 from enum import StrEnum
@@ -192,6 +193,13 @@ def safe_div(a: float, b: float) -> float:
     return a / b if b != 0 else 0
 
 
+def calc_kappa(results: list[Result]) -> float:
+    """Calculate Cohen's Kappa between `human` and `valid` answers."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        return cohen_kappa_score([r.human for r in results], [r.valid for r in results])
+
+
 def calc_classification_metrics(results: list[Result]) -> dict[str, float]:
     """Calculate classification accuracy, precision, recall, F1 and Cohen's Kappa."""
     true_positives = sum(r.human and r.valid for r in results)
@@ -203,7 +211,7 @@ def calc_classification_metrics(results: list[Result]) -> dict[str, float]:
     f1 = safe_div(2 * precision * recall, precision + recall)
 
     accuracy = sum(r.human == r.valid for r in results) / len(results)
-    kappa = cohen_kappa_score([r.human for r in results], [r.valid for r in results])
+    kappa = calc_kappa(results)
 
     return {
         "accuracy": accuracy,
