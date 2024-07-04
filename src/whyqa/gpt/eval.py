@@ -91,7 +91,7 @@ Result: 1 or 0
 
 
 @no_type_check
-def calc_frequencies(results: defaultdict[tuple[bool, int], int]) -> pd.DataFrame:
+def calc_frequencies(results: dict[tuple[bool, int], int]) -> pd.DataFrame:
     """Calculate the frequencies of the results.
 
     The operations here make the type-checker go crazy, so we disable them.
