@@ -119,10 +119,12 @@ def main(
         help="Path to the json file containing the data (list of objects with keys"
         " 'input', 'output', 'gold', 'valid').",
     ),
-    output_dir: Path = typer.Option(
-        Path("out"),
+    output_dir: Path = typer.Argument(
+        ...,
         help="Path to output directory.",
     ),
+    key_file: typer.FileText = typer.Argument(..., help="Path to API key file"),
+    key_name: str = typer.Argument(..., help="API key name"),
     n: int = typer.Option(
         10,
         help="Number of examples to run. Use 0 to run all.",
@@ -131,8 +133,6 @@ def main(
         True,
         help="Whether to shuffle the data before selecting n examples.",
     ),
-    key_file: typer.FileText = typer.Argument(..., help="Path to API key file"),
-    key_name: str = typer.Argument(..., help="API key name"),
     model: str = typer.Option(
         "gpt-4",
         help="Which GPT model to use (gpt-3.5-turbo or gpt-4).",
