@@ -4,7 +4,6 @@
 import json
 import random
 from collections import defaultdict
-from datetime import UTC, datetime
 from dataclasses import dataclass
 from pathlib import Path
 from typing import no_type_check
@@ -208,10 +207,7 @@ def main(
             print("-" * 80)
             print()
 
-    outdir.parent.mkdir(exist_ok=True, parents=True)
-    with (outdir / "cost.csv").open("a") as f:
-        ts = datetime.now(UTC).isoformat()
-        f.write(f"{ts},{total_cost}\n")
+    output_dir.mkdir(exist_ok=True, parents=True)
 
     df = calc_frequencies(results)
     print(df)
