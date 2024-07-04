@@ -130,6 +130,33 @@ def convert_counts(results: dict[tuple[bool, int], int]) -> list[dict[str, int]]
     ]
 
 
+def safe_div(a: float, b: float) -> float:
+    """Try to divide two numbers, return 0 if the denominator is 0."""
+    return a / b if b != 0 else 0
+
+
+def calc_classification_metrics(results: list[Result]) -> dict[str, float]:
+    """Calculate classification accuracy, precision, recall and F1."""
+    total = len(results)
+    correct = sum(r.human == r.valid for r in results)
+
+    true_positives = sum(r.human and r.valid for r in results)
+    false_positives = sum(r.human and not r.valid for r in results)
+    false_negatives = sum(not r.human and r.valid for r in results)
+
+    accuracy = correct / total
+    precision = safe_div(true_positives, true_positives + false_positives)
+    recall = safe_div(true_positives, true_positives + false_negatives)
+    f1 = safe_div(2 * (precision * recall), precision + recall)
+
+    return {
+        "accuracy": accuracy,
+        "precision": precision,
+        "recall": recall,
+        "f1": f1,
+    }
+
+
 def main(
     file: Path = typer.Argument(
         ...,
@@ -241,7 +268,6 @@ def main(
             print("-" * 80)
             print()
 
-    print(json.dumps(result_counts, indent=2))
     output_dir.mkdir(exist_ok=True, parents=True)
     (output_dir / "results.json").write_text(
         json.dumps(
@@ -256,6 +282,14 @@ def main(
 
     df = calc_frequencies(result_counts)
     print(df)
+
+    classification_metrics = calc_classification_metrics(result_data)
+    print("\nClassification metrics:")
+    print(json.dumps(classification_metrics, indent=2))
+    (output_dir / "classification_metrics.json").write_text(
+        json.dumps(classification_metrics, indent=2)
+    )
+
     print(f"\nTotal cost: ${total_cost}")
 
 
