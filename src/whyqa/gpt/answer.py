@@ -34,7 +34,7 @@ from openai import OpenAI
 from tqdm import tqdm
 
 from whyqa import metrics
-from whyqa.gpt.eval import calculate_cost
+from whyqa.gpt.common import calculate_cost
 
 
 @dataclass(frozen=True)

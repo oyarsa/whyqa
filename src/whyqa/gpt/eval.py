@@ -4,30 +4,14 @@ import random
 from collections import defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, no_type_check
+from typing import no_type_check
 
 import pandas as pd
 import typer
 from openai import OpenAI
 from tqdm import tqdm
 
-MODEL_COSTS = {
-    "gpt-3.5-turbo": (  # in: $0.001 / 1K tokens, out: $0.002 / 1K tokens
-        0.000001,
-        0.000002,
-    ),
-    "gpt-4": (0.00003, 0.00006),  # in: $0.03 / 1K tokens, out: $0.06 / 1K tokens
-    # prices per 1M tokens
-    "gpt-4o-2024-05-13": (5 / 1e6, 15 / 1e6),
-    "gpt-3.5-turbo-0125": (0.5 / 1e6, 1.5 / 1e6),
-}
-
-
-def calculate_cost(model: str, response: Any) -> float:
-    input_tokens = response.usage.prompt_tokens
-    output_tokens = response.usage.completion_tokens
-    cost_input, cost_output = MODEL_COSTS[model]
-    return input_tokens * cost_input + output_tokens * cost_output
+from whyqa.gpt.common import MODELS_ALLOWED, calculate_cost
 
 
 def run_gpt(
@@ -121,8 +105,8 @@ def main(
         false, only the progress bar and evaluation results are printed.
     """
 
-    if model not in MODEL_COSTS:
-        raise ValueError(f"Invalid model. Options: {list(MODEL_COSTS.keys())}")
+    if model not in MODELS_ALLOWED:
+        raise ValueError(f"Invalid model. Options: {MODELS_ALLOWED}")
     if system_prompt not in SYSTEM_PROMPTS:
         raise ValueError(f"Invalid system prompt. Options: {SYSTEM_PROMPTS.keys()}")
     if user_prompt not in USER_PROMPTS:
