@@ -15,9 +15,13 @@ def _cm(input: float, output: float) -> tuple[float, float]:
 
 _MODEL_COSTS: Mapping[str, tuple[float, float]] = {
     "gpt-3.5-turbo": _cm(1, 2),
-    "gpt-4": _cm(30, 60),
-    "gpt-4o-2024-05-13": _cm(5, 15),
     "gpt-3.5-turbo-0125": _cm(0.5, 1.5),
+    "gpt-4": _cm(30, 60),
+    "gpt-4-0613": _cm(30, 60),
+    "gpt-4-turbo": _cm(10, 30),
+    "gpt-4-turbo-2024-04-09": _cm(10, 30),
+    "gpt-4o": _cm(5, 15),
+    "gpt-4o-2024-05-13": _cm(5, 15),
 }
 """Costs per token (input, output)."""
 
