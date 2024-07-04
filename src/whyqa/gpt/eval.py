@@ -29,7 +29,7 @@ from whyqa.gpt.common import (
 
 def run_gpt_(
     client: OpenAI, model: str, system_prompt: str, message: str
-) -> tuple[str, float]:
+) -> tuple[str, float, str]:
     response = client.chat.completions.create(
         model=model,
         messages=[
@@ -45,7 +45,8 @@ def run_gpt_(
     )
     result = response.choices[0].message.content
     cost = calculate_cost(model, response)
-    return result or "<empty>", cost
+    model = response.model
+    return result or "<empty>", cost, model
 
 
 @no_type_check
@@ -321,10 +322,14 @@ def main(
     result_counts: dict[tuple[bool, int], int] = defaultdict(int)
     result_data: list[Result] = []
     total_cost = 0
+    model_used = None
 
     for item, display_msg, gpt_msg, valid in tqdm(messages):
-        result_s, cost = run_gpt_(client, model, SYSTEM_PROMPTS[system_prompt], gpt_msg)
+        result_s, cost, model = run_gpt_(
+            client, model, SYSTEM_PROMPTS[system_prompt], gpt_msg
+        )
         total_cost += cost
+        model_used = model
 
         result = result_mode.parse_line(result_s.splitlines()[-1])
         result_counts[(valid, result)] += 1
@@ -337,6 +342,7 @@ def main(
             print("-" * 80)
             print()
 
+    print(f"\nModel used: {model_used}")
     result_counts_conv = convert_counts(result_counts)
 
     output_dir.mkdir(exist_ok=True, parents=True)
