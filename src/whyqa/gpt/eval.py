@@ -13,6 +13,7 @@ from typing import Optional, no_type_check, override
 import pandas as pd
 import typer
 from openai import OpenAI
+from sklearn.metrics import cohen_kappa_score  # type: ignore
 from tqdm import tqdm
 
 from whyqa.gpt.common import (
@@ -192,24 +193,24 @@ def safe_div(a: float, b: float) -> float:
 
 
 def calc_classification_metrics(results: list[Result]) -> dict[str, float]:
-    """Calculate classification accuracy, precision, recall and F1."""
-    total = len(results)
-    correct = sum(r.human == r.valid for r in results)
-
+    """Calculate classification accuracy, precision, recall, F1 and Cohen's Kappa."""
     true_positives = sum(r.human and r.valid for r in results)
     false_positives = sum(r.human and not r.valid for r in results)
     false_negatives = sum(not r.human and r.valid for r in results)
 
-    accuracy = correct / total
     precision = safe_div(true_positives, true_positives + false_positives)
     recall = safe_div(true_positives, true_positives + false_negatives)
-    f1 = safe_div(2 * (precision * recall), precision + recall)
+    f1 = safe_div(2 * precision * recall, precision + recall)
+
+    accuracy = sum(r.human == r.valid for r in results) / len(results)
+    kappa = cohen_kappa_score([r.human for r in results], [r.valid for r in results])
 
     return {
         "accuracy": accuracy,
         "precision": precision,
         "recall": recall,
         "f1": f1,
+        "kappa": kappa,
     }
 
 
@@ -329,7 +330,6 @@ def main(
             print()
 
     result_counts_conv = convert_counts(result_counts)
-    print(json.dumps(result_counts_conv, indent=2))
 
     output_dir.mkdir(exist_ok=True, parents=True)
     (output_dir / "results.json").write_text(
