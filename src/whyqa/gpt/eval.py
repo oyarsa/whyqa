@@ -151,7 +151,7 @@ def main(
         help="Whether to shuffle the data before selecting n examples.",
     ),
     model: str = typer.Option(
-        "gpt-4",
+        "gpt-3.5-turbo",
         help="Which GPT model to use (gpt-3.5-turbo or gpt-4).",
     ),
     system_prompt: str = typer.Option(
