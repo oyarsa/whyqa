@@ -23,7 +23,7 @@ from whyqa.gpt.common import (
 )
 
 
-def run_gpt(
+def run_gpt_(
     client: OpenAI, model: str, system_prompt: str, message: str
 ) -> tuple[str, float]:
     response = client.chat.completions.create(
@@ -204,7 +204,7 @@ def main(
     total_cost = 0
 
     for display_msg, gpt_msg, valid in tqdm(messages):
-        result_s, cost = run_gpt(client, model, SYSTEM_PROMPTS[system_prompt], gpt_msg)
+        result_s, cost = run_gpt_(client, model, SYSTEM_PROMPTS[system_prompt], gpt_msg)
         total_cost += cost
 
         last_line = result_s.splitlines()[-1].replace("Score:", "").strip()
