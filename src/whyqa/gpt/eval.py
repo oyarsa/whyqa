@@ -3,6 +3,7 @@ import json
 import random
 from collections import defaultdict
 from datetime import UTC, datetime
+from dataclasses import dataclass
 from pathlib import Path
 from typing import no_type_check
 
@@ -95,6 +96,15 @@ def calc_frequencies(results: defaultdict[tuple[bool, int], int]) -> pd.DataFram
     return df
 
 
+@dataclass(frozen=True)
+class Entry:
+    narrative: str
+    question: str
+    answer: str
+    pred: str
+    valid: bool
+
+
 def main(
     file: Path,
     outdir: Path = Path("out"),
@@ -133,6 +143,16 @@ def main(
     api_key = key_file.read_text().strip()
 
     data = json.loads(file.read_text())
+    data = [
+        Entry(
+            narrative=d["narrative"],
+            question=d["question"],
+            answer=d["answer"],
+            pred=d["pred"],
+            valid=d["valid"],
+        )
+        for d in json.loads(file.read_text())
+    ]
     if rand:
         random.shuffle(data)
 
@@ -144,12 +164,11 @@ def main(
 
     messages: list[tuple[str, str, bool]] = []
     for item in sampled_data:
-        story = f"Story: {item["narrative"]}"
-        question = f"Question: {item["question"]}"
-        # TODO: Actually create and use a prediction
-        pred = f"Answer: {item["pred"]}"
-        gold = f"Gold: {item["answer"]}"
-        valid = True
+        story = f"Story: {item.narrative}"
+        question = f"Question: {item.question}"
+        pred = f"Answer: {item.pred}"
+        gold = f"Gold: {item.answer}"
+        valid = item.valid
 
         display_msg = "\n\n".join([story, question, pred, gold]).strip()
         gpt_msg = "\n\n".join([
