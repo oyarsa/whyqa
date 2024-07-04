@@ -19,7 +19,7 @@ _MODEL_COSTS: Mapping[str, tuple[float, float]] = {
     "gpt-4o-2024-05-13": _cm(5, 15),
     "gpt-3.5-turbo-0125": _cm(0.5, 1.5),
 }
-"""Costs per token."""
+"""Costs per token (input, output)."""
 
 MODELS_ALLOWED = list(_MODEL_COSTS.keys())
 """Allowed models."""
