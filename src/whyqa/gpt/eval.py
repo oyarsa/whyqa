@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+"""Run a GPT model on the given data and evaluate the results."""
+
 import json
 import random
 from collections import defaultdict
@@ -106,33 +108,42 @@ class Entry:
 
 
 def main(
-    file: Path,
-    outdir: Path = Path("out"),
-    n: int = 10,
-    rand: bool = True,
-    key_file: Path = Path("key"),
-    model: str = "gpt-4",
-    system_prompt: str = "simple",
-    user_prompt: str = "instructions",
-    print_messages: bool = True,
+    file: Path = typer.Argument(
+        ...,
+        help="Path to the json file containing the data (list of objects with keys"
+        " 'input', 'output', 'gold', 'valid').",
+    ),
+    output_dir: Path = typer.Option(
+        Path("out"),
+        help="Path to output directory.",
+    ),
+    n: int = typer.Option(
+        10,
+        help="Number of examples to run. Use 0 to run all.",
+    ),
+    rand: bool = typer.Option(
+        True,
+        help="Whether to shuffle the data before selecting n examples.",
+    ),
+    model: str = typer.Option(
+        "gpt-4",
+        help="Which GPT model to use (gpt-3.5-turbo or gpt-4).",
+    ),
+    system_prompt: str = typer.Option(
+        "simple",
+        help="Which system prompt to use (only 'simple' for now).",
+    ),
+    user_prompt: str = typer.Option(
+        "instructions",
+        help="Which user prompt to use ('simple', 'instructions_score',"
+        "'instructions_binary').",
+    ),
+    print_messages: bool = typer.Option(
+        False,
+        help="Whether to print the prompt, context, gold and prediction. If false, only"
+        " the progress bar and evaluation results are printed.",
+    ),
 ) -> None:
-    """
-    Run a GPT model on the given data and evaluate the results.
-
-    \b
-    - file: Path to the json file containing the data (list of objects with keys
-        'input', 'output', 'gold', 'valid')
-    - n: Number of examples to run
-    - rand: Whether to shuffle the data before selecting n examples
-    - key_file: Path to the file containing the OpenAI API key (simple text file
-        containing only the key)
-    - model: Which GPT model to use (gpt-3.5-turbo or gpt-4)
-    - system_prompt: Which system prompt to use (only 'simple' for now)
-    - user_prompt: Which user prompt to use ('simple' or 'instructions')
-    - print_messages: Whether to print the prompt, context, gold and prediction. If
-        false, only the progress bar and evaluation results are printed.
-    """
-
     if model not in MODELS_ALLOWED:
         raise ValueError(f"Invalid model. Options: {MODELS_ALLOWED}")
     if system_prompt not in SYSTEM_PROMPTS:
