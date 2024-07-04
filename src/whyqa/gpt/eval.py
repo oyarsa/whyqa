@@ -5,7 +5,7 @@ import abc
 import json
 import random
 import warnings
-from collections import defaultdict
+from collections import Counter
 from dataclasses import asdict, dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -47,20 +47,6 @@ def run_gpt_(
     cost = calculate_cost(model, response)
     model = response.model
     return result or "<empty>", cost, model
-
-
-@no_type_check
-def calc_frequencies(results: dict[tuple[bool, int], int]) -> pd.DataFrame:
-    """Calculate the frequencies of the results.
-
-    The operations here make the type-checker go crazy, so we disable them.
-    """
-    df = pd.DataFrame(list(results.items()), columns=["Combination", "Count"])
-    df[["gold", "pred"]] = pd.DataFrame(df["Combination"].tolist(), index=df.index)
-    df = df.drop("Combination", axis="columns")
-    df["Count"] = df["Count"].astype(int)
-    df = df.pivot_table(index="gold", columns="pred", values="Count", fill_value=0)
-    return df
 
 
 @dataclass(frozen=True)
@@ -177,16 +163,21 @@ Result: 1 or 0
 }
 
 
-def convert_counts(results: dict[tuple[bool, int], int]) -> list[dict[str, int]]:
-    """Convert the counts to a JSON-serialisable format."""
-    return [
-        {
-            "gold": gold,
-            "pred": pred,
-            "count": count,
-        }
-        for (gold, pred), count in results.items()
-    ]
+@no_type_check
+def calc_frequencies(results: list[Result]) -> pd.DataFrame:
+    """Calculate the frequencies of the results.
+
+    The operations here make the type-checker go crazy, so we disable them.
+    """
+    result_counts = Counter((i.human, i.valid) for i in results)
+
+    df = pd.DataFrame(list(result_counts.items()), columns=["Combination", "Count"])
+    df[["gold", "pred"]] = pd.DataFrame(df["Combination"].tolist(), index=df.index)
+    df = df.drop("Combination", axis="columns")
+    df["Count"] = df["Count"].astype(int)
+    df = df.pivot_table(index="gold", columns="pred", values="Count", fill_value=0)
+
+    return df
 
 
 def safe_div(a: float, b: float) -> float:
@@ -319,7 +310,6 @@ def main(
         ]).strip()
         messages.append((item, display_msg, gpt_msg, valid))
 
-    result_counts: dict[tuple[bool, int], int] = defaultdict(int)
     result_data: list[Result] = []
     total_cost = 0
     model_used = None
@@ -332,7 +322,6 @@ def main(
         model_used = model
 
         result = result_mode.parse_line(result_s.splitlines()[-1])
-        result_counts[(valid, result)] += 1
 
         result_data.append(Result(**asdict(item), human=result_mode.to_binary(result)))
 
@@ -343,7 +332,7 @@ def main(
             print()
 
     print(f"\nModel used: {model_used}")
-    result_counts_conv = convert_counts(result_counts)
+    print(calc_frequencies(result_data))
 
     output_dir.mkdir(exist_ok=True, parents=True)
     (output_dir / "results.json").write_text(
@@ -352,13 +341,7 @@ def main(
             indent=2,
         )
     )
-    (output_dir / "result_counts.json").write_text(
-        json.dumps(result_counts_conv, indent=2)
-    )
     (output_dir / "config.json").write_text(json.dumps(args, indent=2))
-
-    df = calc_frequencies(result_counts)
-    print(df)
 
     classification_metrics = calc_classification_metrics(result_data)
     print("\nClassification metrics:")
