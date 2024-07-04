@@ -218,6 +218,7 @@ def main(
             print()
 
     output_dir.mkdir(exist_ok=True, parents=True)
+    (output_dir / "results.json").write_text(json.dumps(results, indent=2))
     (output_dir / "config.json").write_text(json.dumps(args, indent=2))
 
     df = calc_frequencies(results)
