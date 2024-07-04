@@ -64,3 +64,6 @@ preview = true
 # so we disable it here to avoid duplicate errors
 reportUnusedImport = false
 typeCheckingMode = "strict"
+
+[tool.pdm.scripts]
+lint = {shell = "ruff check; ruff format; pyright ."}
