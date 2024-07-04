@@ -269,6 +269,9 @@ def main(
             print("-" * 80)
             print()
 
+    result_counts_conv = convert_counts(result_counts)
+    print(json.dumps(result_counts_conv, indent=2))
+
     output_dir.mkdir(exist_ok=True, parents=True)
     (output_dir / "results.json").write_text(
         json.dumps(
@@ -277,7 +280,7 @@ def main(
         )
     )
     (output_dir / "result_counts.json").write_text(
-        json.dumps(convert_counts(result_counts), indent=2)
+        json.dumps(result_counts_conv, indent=2)
     )
     (output_dir / "config.json").write_text(json.dumps(args, indent=2))
 
