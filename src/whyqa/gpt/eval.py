@@ -55,12 +55,12 @@ class Entry:
     question: str
     answer: str
     pred: str
-    valid: bool
+    human_eval: bool
 
 
 @dataclass(frozen=True)
 class Result(Entry):
-    human: bool
+    model_eval: bool
 
 
 class ResultMode(abc.ABC):
@@ -165,11 +165,11 @@ Result: 1 or 0
 
 @no_type_check
 def calc_frequencies(results: list[Result]) -> pd.DataFrame:
-    """Calculate the frequencies of the results.
+    """Calculate the frequencies of the results (human_eval vs. model_eval).
 
     The operations here make the type-checker go crazy, so we disable them.
     """
-    result_counts = Counter((i.human, i.valid) for i in results)
+    result_counts = Counter((i.human_eval, i.model_eval) for i in results)
 
     df = pd.DataFrame(list(result_counts.items()), columns=["Combination", "Count"])
     df[["gold", "pred"]] = pd.DataFrame(df["Combination"].tolist(), index=df.index)
@@ -186,23 +186,25 @@ def safe_div(a: float, b: float) -> float:
 
 
 def calc_kappa(results: list[Result]) -> float:
-    """Calculate Cohen's Kappa between `human` and `valid` answers."""
+    """Calculate Cohen's Kappa between `model_eval` and `human_eval` answers."""
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        return cohen_kappa_score([r.human for r in results], [r.valid for r in results])
+        return cohen_kappa_score(
+            [r.model_eval for r in results], [r.human_eval for r in results]
+        )
 
 
 def calc_classification_metrics(results: list[Result]) -> dict[str, float]:
     """Calculate classification accuracy, precision, recall, F1 and Cohen's Kappa."""
-    true_positives = sum(r.human and r.valid for r in results)
-    false_positives = sum(r.human and not r.valid for r in results)
-    false_negatives = sum(not r.human and r.valid for r in results)
+    true_positives = sum(r.model_eval and r.human_eval for r in results)
+    false_positives = sum(r.model_eval and not r.human_eval for r in results)
+    false_negatives = sum(not r.model_eval and r.human_eval for r in results)
 
     precision = safe_div(true_positives, true_positives + false_positives)
     recall = safe_div(true_positives, true_positives + false_negatives)
     f1 = safe_div(2 * precision * recall, precision + recall)
 
-    accuracy = sum(r.human == r.valid for r in results) / len(results)
+    accuracy = sum(r.model_eval == r.human_eval for r in results) / len(results)
     kappa = calc_kappa(results)
 
     return {
@@ -255,8 +257,8 @@ def main(
     ),
     result_threshold: Optional[int] = typer.Option(
         None,
-        help="Threshold for the score mode. If the score is greater or equal to this,"
-        " the result is considered valid.",
+        help="Threshold for the score mode. The model result is valid is the score is"
+        " equal or greater than this.",
     ),
 ) -> None:
     if model not in MODELS_ALLOWED:
@@ -279,7 +281,7 @@ def main(
             question=d["question"],
             answer=d["answer"],
             pred=d["pred"],
-            valid=d["valid"],
+            human_eval=d["valid"],
         )
         for d in json.loads(file.read_text())
     ]
@@ -292,14 +294,13 @@ def main(
 
     sampled_data = data[:n]
 
-    messages: list[tuple[Entry, str, str, bool]] = []
+    messages: list[tuple[Entry, str, str]] = []
     for item in sampled_data:
         story = f"Story: {item.narrative}"
         question = f"Question: {item.question}"
         pred = f"Answer: {item.pred}"
         gold = f"Gold: {item.answer}"
-        valid = item.valid
-        valid_msg = f"Valid: {valid}"
+        valid_msg = f"Human eval: {item.human_eval}"
 
         display_msg = "\n\n".join([story, question, pred, gold, valid_msg]).strip()
         gpt_msg = "\n\n".join([
@@ -308,13 +309,13 @@ def main(
             question,
             pred,
         ]).strip()
-        messages.append((item, display_msg, gpt_msg, valid))
+        messages.append((item, display_msg, gpt_msg))
 
     result_data: list[Result] = []
     total_cost = 0
     model_used = None
 
-    for item, display_msg, gpt_msg, valid in tqdm(messages):
+    for item, display_msg, gpt_msg in tqdm(messages):
         result_s, cost, model = run_gpt_(
             client, model, SYSTEM_PROMPTS[system_prompt], gpt_msg
         )
@@ -323,7 +324,9 @@ def main(
 
         result = result_mode.parse_line(result_s.splitlines()[-1])
 
-        result_data.append(Result(**asdict(item), human=result_mode.to_binary(result)))
+        result_data.append(
+            Result(**asdict(item), model_eval=result_mode.to_binary(result))
+        )
 
         if print_messages:
             print(display_msg)
