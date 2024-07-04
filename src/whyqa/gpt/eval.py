@@ -4,7 +4,7 @@
 import json
 import random
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import no_type_check
 
@@ -113,6 +113,23 @@ class Entry:
     valid: bool
 
 
+@dataclass(frozen=True)
+class Result(Entry):
+    human: int
+
+
+def convert_counts(results: dict[tuple[bool, int], int]) -> list[dict[str, int]]:
+    """Convert the counts to a JSON-serialisable format."""
+    return [
+        {
+            "gold": gold,
+            "pred": pred,
+            "count": count,
+        }
+        for (gold, pred), count in results.items()
+    ]
+
+
 def main(
     file: Path = typer.Argument(
         ...,
@@ -183,7 +200,7 @@ def main(
 
     sampled_data = data[:n]
 
-    messages: list[tuple[str, str, bool]] = []
+    messages: list[tuple[Entry, str, str, bool]] = []
     for item in sampled_data:
         story = f"Story: {item.narrative}"
         question = f"Question: {item.question}"
@@ -198,12 +215,13 @@ def main(
             question,
             pred,
         ]).strip()
-        messages.append((display_msg, gpt_msg, valid))
+        messages.append((item, display_msg, gpt_msg, valid))
 
-    results: defaultdict[tuple[bool, int], int] = defaultdict(int)
+    result_counts: dict[tuple[bool, int], int] = defaultdict(int)
+    result_data: list[Result] = []
     total_cost = 0
 
-    for display_msg, gpt_msg, valid in tqdm(messages):
+    for item, display_msg, gpt_msg, valid in tqdm(messages):
         result_s, cost = run_gpt_(client, model, SYSTEM_PROMPTS[system_prompt], gpt_msg)
         total_cost += cost
 
@@ -214,7 +232,8 @@ def main(
             .strip()
         )
         result = int(last_line) if last_line.isdigit() else 0
-        results[(valid, result)] += 1
+        result_counts[(valid, result)] += 1
+        result_data.append(Result(**asdict(item), human=result))
 
         if print_messages:
             print(display_msg)
@@ -222,11 +241,20 @@ def main(
             print("-" * 80)
             print()
 
+    print(json.dumps(result_counts, indent=2))
     output_dir.mkdir(exist_ok=True, parents=True)
-    (output_dir / "results.json").write_text(json.dumps(results, indent=2))
+    (output_dir / "results.json").write_text(
+        json.dumps(
+            [asdict(d) for d in result_data],
+            indent=2,
+        )
+    )
+    (output_dir / "result_counts.json").write_text(
+        json.dumps(convert_counts(result_counts), indent=2)
+    )
     (output_dir / "config.json").write_text(json.dumps(args, indent=2))
 
-    df = calc_frequencies(results)
+    df = calc_frequencies(result_counts)
     print(df)
     print(f"\nTotal cost: ${total_cost}")
 
