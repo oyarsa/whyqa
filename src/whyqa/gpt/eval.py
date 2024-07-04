@@ -42,8 +42,8 @@ correct given a question.""",
 USER_PROMPTS = {
     "simple": "Based on the story, question and answer, consider the answer is correct \
 for the question. Explain your decision.",
-    "instructions": """\
-Based on the story, question and answer, consider the answer is correct for the \
+    "instructions_score": """\
+Based on the story, question and answer, determine if the answer is correct for the \
 question. Explain your decision.
 
 Evaluate the answer according to the following criteria:
@@ -59,6 +59,24 @@ Reason about the text instead of merely extracting spans.
 Response format:
 Explanation: ...
 Score: number from 1 to 5
+""",
+    "instructions_binary": """\
+Based on the story, question and answer, determine if the answer is correct for the \
+question. Explain your decision.
+
+Evaluate the answer according to the following criteria:
+
+1. Read the story, the question and the answer. Check if the answer correctly answers \
+the question.
+2. The story always provides the reason for the question, but it might be implicit.
+Reason about the text instead of merely extracting spans.
+3. Answer with the result of the evaluation: 1 if the answer is correct, 0 \
+otherwise.
+
+Response format:
+
+Explanation: ...
+Result: 1 or 0
 """,
 }
 
