@@ -19,22 +19,25 @@ Two files are created in the output directory:
 - metrics.json: The metrics calculated for the results
 """
 
-import inspect
-import io
 import json
 import random
-import subprocess
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TextIO, TypedDict
+from typing import TextIO
 
 import typer
 from openai import OpenAI
 from tqdm import tqdm
 
 from whyqa import metrics
-from whyqa.gpt.common import calculate_cost
+from whyqa.gpt.common import (
+    calculate_cost,
+    get_args_,
+    get_current_commit_,
+    init_client,
+    render_args,
+)
 
 
 @dataclass(frozen=True)
@@ -182,22 +185,6 @@ def run_answer(
     return results
 
 
-class ClientConfig(TypedDict):
-    api_type: str
-    key: str
-
-
-def init_client(api_type: str, config_from_type: dict[str, ClientConfig]) -> OpenAI:
-    """Create client for OpenAI API from the config file."""
-    config = config_from_type[api_type]
-
-    if not api_type.startswith("openai"):
-        raise ValueError(f"Unknown API type: {config["api_type"]}")
-
-    print("Using OpenAI API")
-    return OpenAI(api_key=config["key"])
-
-
 def render_metrics(results: metrics.Result) -> str:
     """Render metrics as a string."""
     return ">>> METRICS\n" + "\n".join(
@@ -231,66 +218,6 @@ def load_dataset(file: TextIO) -> list[Entry]:
         )
         for d in json.load(file)
     ]
-
-
-def get_args_() -> dict[str, str]:
-    """Get the arguments of the caller function.
-
-    It does this by getting the frame of the caller and extracting the arguments.
-    Values of type `io.TextIOWrapper` are converted to their `name` attribute.
-
-    Note: impure function - reads the stack frame.
-
-    Returns:
-        Mapping of argument names to their string values.
-    """
-    current_frame = inspect.currentframe()
-    if current_frame is None:
-        return {}
-
-    frame = current_frame.f_back
-    if frame is None:
-        return {}
-
-    args, _, _, local_vars = inspect.getargvalues(frame)
-
-    result: dict[str, str] = {}
-    for arg in args:
-        value = local_vars[arg]
-        result[arg] = value.name if isinstance(value, io.TextIOWrapper) else str(value)
-
-    return result
-
-
-def get_current_commit_() -> str:
-    """Get the current commit hash, with "(dirty)" if the repo is dirty.
-
-    Note: impure function - runs shell commands.
-    Returns "unknown" if the git commands fail.
-    """
-    try:
-        git_hash = subprocess.check_output(
-            ["git", "rev-parse", "--short", "HEAD"], text=True
-        ).strip()
-        # Output is non-empty if there are changes (dirty)
-        is_dirty = bool(
-            subprocess.check_output(["git", "status", "--porcelain"], text=True).strip()
-        )
-    except subprocess.CalledProcessError:
-        return "unknown"
-    else:
-        if is_dirty:
-            git_hash += " (dirty)"
-        return git_hash
-
-
-def render_args(args: dict[str, str]) -> str:
-    """Render the arguments as a string."""
-    return (
-        ">>> CONFIG\n"
-        + "\n".join(f"  {key}: {value}" for key, value in args.items())
-        + "\n"
-    )
 
 
 def main(
