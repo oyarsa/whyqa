@@ -8,7 +8,7 @@ from collections import defaultdict
 from dataclasses import asdict, dataclass
 from enum import StrEnum
 from pathlib import Path
-from typing import no_type_check, override
+from typing import Optional, no_type_check, override
 
 import pandas as pd
 import typer
@@ -156,12 +156,13 @@ class ResultModeType(StrEnum):
     SCORE = "score"
     BINARY = "binary"
 
-    def new(self, threshold: int | None) -> ResultMode:
+    def new(self, score_threshold: int | None) -> ResultMode:
         if self is self.BINARY:
             return BinaryMode()
-        if threshold is None:
+
+        if score_threshold is None:
             raise ValueError("Threshold required for score mode")
-        return ScoreMode(threshold)
+        return ScoreMode(score_threshold)
 
 
 def convert_counts(results: dict[tuple[bool, int], int]) -> list[dict[str, int]]:
@@ -246,8 +247,8 @@ def main(
         "--result-mode",
         help="Whether the result is binary or a score.",
     ),
-    result_threshold: int = typer.Option(
-        3,
+    result_threshold: Optional[int] = typer.Option(
+        None,
         help="Threshold for the score mode. If the score is greater or equal to this,"
         " the result is considered valid.",
     ),
