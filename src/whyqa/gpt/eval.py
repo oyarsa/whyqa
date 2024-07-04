@@ -142,7 +142,7 @@ def main(
         help="Which system prompt to use (only 'simple' for now).",
     ),
     user_prompt: str = typer.Option(
-        "instructions",
+        "simple",
         help="Which user prompt to use ('simple', 'instructions_score',"
         "'instructions_binary').",
     ),
