@@ -207,7 +207,12 @@ def main(
         result_s, cost = run_gpt_(client, model, SYSTEM_PROMPTS[system_prompt], gpt_msg)
         total_cost += cost
 
-        last_line = result_s.splitlines()[-1].replace("Score:", "").strip()
+        last_line = (
+            result_s.splitlines()[-1]
+            .replace("Score:", "")  # For user_prompt="instructions_score"
+            .replace("Result:", "")  # For user_prompt="instructions_binary"
+            .strip()
+        )
         result = int(last_line) if last_line.isdigit() else 0
         results[(valid, result)] += 1
 
