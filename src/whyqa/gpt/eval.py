@@ -13,7 +13,14 @@ import typer
 from openai import OpenAI
 from tqdm import tqdm
 
-from whyqa.gpt.common import MODELS_ALLOWED, calculate_cost
+from whyqa.gpt.common import (
+    MODELS_ALLOWED,
+    calculate_cost,
+    get_args_,
+    get_current_commit_,
+    init_client,
+    render_args,
+)
 
 
 def run_gpt(
@@ -124,6 +131,8 @@ def main(
         True,
         help="Whether to shuffle the data before selecting n examples.",
     ),
+    key_file: typer.FileText = typer.Argument(..., help="Path to API key file"),
+    key_name: str = typer.Argument(..., help="API key name"),
     model: str = typer.Option(
         "gpt-4",
         help="Which GPT model to use (gpt-3.5-turbo or gpt-4).",
@@ -146,13 +155,15 @@ def main(
     if model not in MODELS_ALLOWED:
         raise ValueError(f"Invalid model. Options: {MODELS_ALLOWED}")
     if system_prompt not in SYSTEM_PROMPTS:
-        raise ValueError(f"Invalid system prompt. Options: {SYSTEM_PROMPTS.keys()}")
+        raise ValueError(f"Invalid system prompt. Options: {list(SYSTEM_PROMPTS)}")
     if user_prompt not in USER_PROMPTS:
-        raise ValueError(f"Invalid user prompt. Options: {USER_PROMPTS.keys()}")
+        raise ValueError(f"Invalid user prompt. Options: {list(USER_PROMPTS)}")
 
-    api_key = key_file.read_text().strip()
+    args = get_args_() | {"commit": get_current_commit_()}
+    print(render_args(args))
 
-    data = json.loads(file.read_text())
+    client = init_client(key_name, json.load(key_file))
+
     data = [
         Entry(
             narrative=d["narrative"],
@@ -189,7 +200,6 @@ def main(
         ]).strip()
         messages.append((display_msg, gpt_msg, valid))
 
-    client = OpenAI(api_key=api_key)
     results: defaultdict[tuple[bool, int], int] = defaultdict(int)
     total_cost = 0
 
@@ -208,6 +218,7 @@ def main(
             print()
 
     output_dir.mkdir(exist_ok=True, parents=True)
+    (output_dir / "config.json").write_text(json.dumps(args, indent=2))
 
     df = calc_frequencies(results)
     print(df)
