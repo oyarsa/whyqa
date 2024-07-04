@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """Run a GPT model on the given data and evaluate the results."""
 
+import abc
 import json
 import random
 from collections import defaultdict
 from dataclasses import asdict, dataclass
+from enum import StrEnum
 from pathlib import Path
-from typing import no_type_check
+from typing import no_type_check, override
 
 import pandas as pd
 import typer
@@ -115,7 +117,51 @@ class Entry:
 
 @dataclass(frozen=True)
 class Result(Entry):
-    human: int
+    human: bool
+
+
+class ResultMode(abc.ABC):
+    @abc.abstractmethod
+    def parse_line(self, line: str) -> int: ...
+    @abc.abstractmethod
+    def to_binary(self, value: int) -> bool: ...
+
+
+@dataclass(frozen=True)
+class ScoreMode(ResultMode):
+    threshold: int
+
+    @override
+    def parse_line(self, line: str) -> int:
+        return int(line.lower().replace("score:", "").strip())
+
+    @override
+    def to_binary(self, value: int) -> bool:
+        return value >= self.threshold
+
+
+class BinaryMode(ResultMode):
+    @override
+    def parse_line(self, line: str) -> int:
+        return int(line.lower().replace("result:", "").strip())
+
+    @override
+    def to_binary(self, value: int) -> bool:
+        if value not in (0, 1):
+            raise ValueError(f"Invalid binary value: {value}")
+        return bool(value)
+
+
+class ResultModeType(StrEnum):
+    SCORE = "score"
+    BINARY = "binary"
+
+    def new(self, threshold: int | None) -> ResultMode:
+        if self is self.BINARY:
+            return BinaryMode()
+        if threshold is None:
+            raise ValueError("Threshold required for score mode")
+        return ScoreMode(threshold)
 
 
 def convert_counts(results: dict[tuple[bool, int], int]) -> list[dict[str, int]]:
@@ -195,6 +241,16 @@ def main(
         help="Whether to print the prompt, context, gold and prediction. If false, only"
         " the progress bar and evaluation results are printed.",
     ),
+    result_mode_type: ResultModeType = typer.Option(
+        ResultModeType.BINARY,
+        "--result-mode",
+        help="Whether the result is binary or a score.",
+    ),
+    result_threshold: int = typer.Option(
+        3,
+        help="Threshold for the score mode. If the score is greater or equal to this,"
+        " the result is considered valid.",
+    ),
 ) -> None:
     if model not in MODELS_ALLOWED:
         raise ValueError(f"Invalid model. Options: {MODELS_ALLOWED}")
@@ -207,6 +263,7 @@ def main(
     print(render_args(args))
 
     client = init_client(key_name, json.load(key_file))
+    result_mode = result_mode_type.new(result_threshold)
 
     data = [
         Entry(
@@ -253,15 +310,10 @@ def main(
         result_s, cost = run_gpt_(client, model, SYSTEM_PROMPTS[system_prompt], gpt_msg)
         total_cost += cost
 
-        last_line = (
-            result_s.splitlines()[-1]
-            .replace("Score:", "")  # For user_prompt="instructions_score"
-            .replace("Result:", "")  # For user_prompt="instructions_binary"
-            .strip()
-        )
-        result = int(last_line) if last_line.isdigit() else 0
+        result = result_mode.parse_line(result_s.splitlines()[-1])
         result_counts[(valid, result)] += 1
-        result_data.append(Result(**asdict(item), human=result))
+
+        result_data.append(Result(**asdict(item), human=result_mode.to_binary(result)))
 
         if print_messages:
             print(display_msg)
