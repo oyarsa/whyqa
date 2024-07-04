@@ -46,52 +46,6 @@ def run_gpt_(
     return result or "<empty>", cost
 
 
-SYSTEM_PROMPTS = {
-    "simple": """You are a helpful assistant that can evaluate whether an answer is \
-correct given a question.""",
-}
-USER_PROMPTS = {
-    "simple": "Based on the story, question and answer, consider the answer is correct \
-for the question. Explain your decision.",
-    "instructions_score": """\
-Based on the story, question and answer, determine if the answer is correct for the \
-question. Explain your decision.
-
-Evaluate the answer according to the following criteria:
-
-1. Read the story, the question and the answer. Check if the answer correctly answers \
-the question.
-2. Make sure that the answer only contains the necessary information.
-3. Assign a score for validity on a scale from 1 to 5, where 1 is the lowest and 5 is \
-the highest based on the Evaluation Criteria.
-4. The story always provides the reason for the question, but it might be implicit. \
-Reason about the text instead of merely extracting spans.
-
-Response format:
-Explanation: ...
-Score: number from 1 to 5
-""",
-    "instructions_binary": """\
-Based on the story, question and answer, determine if the answer is correct for the \
-question. Explain your decision.
-
-Evaluate the answer according to the following criteria:
-
-1. Read the story, the question and the answer. Check if the answer correctly answers \
-the question.
-2. The story always provides the reason for the question, but it might be implicit.
-Reason about the text instead of merely extracting spans.
-3. Answer with the result of the evaluation: 1 if the answer is correct, 0 \
-otherwise.
-
-Response format:
-
-Explanation: ...
-Result: 1 or 0
-""",
-}
-
-
 @no_type_check
 def calc_frequencies(results: dict[tuple[bool, int], int]) -> pd.DataFrame:
     """Calculate the frequencies of the results.
@@ -165,6 +119,61 @@ class ResultModeType(StrEnum):
         return ScoreMode(score_threshold)
 
 
+SYSTEM_PROMPTS = {
+    "simple": """You are a helpful assistant that can evaluate whether an answer is \
+correct given a question.""",
+}
+USER_PROMPTS = {
+    "simple": (
+        "Based on the story, question and answer, consider the answer is correct \
+for the question. Explain your decision.",
+        ResultModeType.SCORE,
+    ),
+    "instructions_score": (
+        """\
+Based on the story, question and answer, determine if the answer is correct for the \
+question. Explain your decision.
+
+Evaluate the answer according to the following criteria:
+
+1. Read the story, the question and the answer. Check if the answer correctly answers \
+the question.
+2. Make sure that the answer only contains the necessary information.
+3. Assign a score for validity on a scale from 1 to 5, where 1 is the lowest and 5 is \
+the highest based on the Evaluation Criteria.
+4. The story always provides the reason for the question, but it might be implicit. \
+Reason about the text instead of merely extracting spans.
+
+Response format:
+Explanation: ...
+Score: number from 1 to 5
+""",
+        ResultModeType.SCORE,
+    ),
+    "instructions_binary": (
+        """\
+Based on the story, question and answer, determine if the answer is correct for the \
+question. Explain your decision.
+
+Evaluate the answer according to the following criteria:
+
+1. Read the story, the question and the answer. Check if the answer correctly answers \
+the question.
+2. The story always provides the reason for the question, but it might be implicit.
+Reason about the text instead of merely extracting spans.
+3. Answer with the result of the evaluation: 1 if the answer is correct, 0 \
+otherwise.
+
+Response format:
+
+Explanation: ...
+Result: 1 or 0
+""",
+        ResultModeType.BINARY,
+    ),
+}
+
+
 def convert_counts(results: dict[tuple[bool, int], int]) -> list[dict[str, int]]:
     """Convert the counts to a JSON-serialisable format."""
     return [
@@ -232,8 +241,9 @@ def main(
         "simple",
         help="Which system prompt to use (only 'simple' for now).",
     ),
-    user_prompt: str = typer.Option(
+    user_prompt_key: str = typer.Option(
         "simple",
+        "--user-prompt",
         help="Which user prompt to use ('simple', 'instructions_score',"
         "'instructions_binary').",
     ),
@@ -241,11 +251,6 @@ def main(
         False,
         help="Whether to print the prompt, context, gold and prediction. If false, only"
         " the progress bar and evaluation results are printed.",
-    ),
-    result_mode_type: ResultModeType = typer.Option(
-        ResultModeType.BINARY,
-        "--result-mode",
-        help="Whether the result is binary or a score.",
     ),
     result_threshold: Optional[int] = typer.Option(
         None,
@@ -257,13 +262,14 @@ def main(
         raise ValueError(f"Invalid model. Options: {MODELS_ALLOWED}")
     if system_prompt not in SYSTEM_PROMPTS:
         raise ValueError(f"Invalid system prompt. Options: {list(SYSTEM_PROMPTS)}")
-    if user_prompt not in USER_PROMPTS:
+    if user_prompt_key not in USER_PROMPTS:
         raise ValueError(f"Invalid user prompt. Options: {list(USER_PROMPTS)}")
 
     args = get_args_() | {"commit": get_current_commit_()}
     print(render_args(args))
 
     client = init_client(key_name, json.load(key_file))
+    user_prompt, result_mode_type = USER_PROMPTS[user_prompt_key]
     result_mode = result_mode_type.new(result_threshold)
 
     data = [
@@ -296,7 +302,7 @@ def main(
 
         display_msg = "\n\n".join([story, question, pred, gold, valid_msg]).strip()
         gpt_msg = "\n\n".join([
-            USER_PROMPTS[user_prompt],
+            user_prompt,
             story,
             question,
             pred,
