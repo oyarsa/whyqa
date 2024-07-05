@@ -9,11 +9,12 @@ from collections import Counter
 from dataclasses import asdict, dataclass
 from enum import StrEnum
 from pathlib import Path
-from typing import Optional, no_type_check, override
+from typing import Optional, cast, no_type_check, override
 
 import pandas as pd
 import typer
 from openai import OpenAI
+from scipy.stats import spearmanr  # type: ignore
 from sklearn.metrics import cohen_kappa_score  # type: ignore
 from tqdm import tqdm
 
@@ -185,16 +186,7 @@ def safe_div(a: float, b: float) -> float:
     return a / b if b != 0 else 0
 
 
-def calc_kappa(results: list[Result]) -> float:
-    """Calculate Cohen's Kappa between `model_eval` and `human_eval` answers."""
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        return cohen_kappa_score(
-            [r.model_eval for r in results], [r.human_eval for r in results]
-        )
-
-
-def calc_classification_metrics(results: list[Result]) -> dict[str, float]:
+def calc_metrics(results: list[Result]) -> dict[str, float]:
     """Calculate classification accuracy, precision, recall, F1 and Cohen's Kappa."""
     true_positives = sum(r.model_eval and r.human_eval for r in results)
     false_positives = sum(r.model_eval and not r.human_eval for r in results)
@@ -204,8 +196,14 @@ def calc_classification_metrics(results: list[Result]) -> dict[str, float]:
     recall = safe_div(true_positives, true_positives + false_negatives)
     f1 = safe_div(2 * precision * recall, precision + recall)
 
-    accuracy = sum(r.model_eval == r.human_eval for r in results) / len(results)
-    kappa = calc_kappa(results)
+    y_true = [r.human_eval for r in results]
+    y_pred = [r.model_eval for r in results]
+    accuracy = sum(yt == yp for yt, yp in zip(y_true, y_pred)) / len(results)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        kappa = cohen_kappa_score(y_true, y_pred)
+        spearman = cast(float, spearmanr(y_true, y_pred)[0])
 
     return {
         "accuracy": accuracy,
@@ -213,6 +211,7 @@ def calc_classification_metrics(results: list[Result]) -> dict[str, float]:
         "recall": recall,
         "f1": f1,
         "kappa": kappa,
+        "spearman": spearman,
     }
 
 
@@ -346,7 +345,7 @@ def main(
     )
     (output_dir / "config.json").write_text(json.dumps(args, indent=2))
 
-    classification_metrics = calc_classification_metrics(result_data)
+    classification_metrics = calc_metrics(result_data)
     print("\nClassification metrics:")
     print(json.dumps(classification_metrics, indent=2))
     (output_dir / "classification_metrics.json").write_text(
