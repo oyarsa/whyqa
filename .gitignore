@@ -218,5 +218,6 @@ Sessionx.vim
 key
 dataset
 output
+.tmp
 
 .pdm-python
