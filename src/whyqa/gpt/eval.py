@@ -15,7 +15,11 @@ import pandas as pd
 import typer
 from openai import OpenAI
 from scipy.stats import spearmanr  # type: ignore
-from sklearn.metrics import cohen_kappa_score  # type: ignore
+from sklearn.metrics import (  # type: ignore
+    accuracy_score,  # type: ignore
+    cohen_kappa_score,  # type: ignore
+    precision_recall_fscore_support,  # type: ignore
+)
 from tqdm import tqdm
 
 from whyqa.gpt.common import (
@@ -187,21 +191,28 @@ def safe_div(a: float, b: float) -> float:
 
 
 def calc_metrics(results: list[Result]) -> dict[str, float]:
-    """Calculate classification accuracy, precision, recall, F1 and Cohen's Kappa."""
-    true_positives = sum(r.model_eval and r.human_eval for r in results)
-    false_positives = sum(r.model_eval and not r.human_eval for r in results)
-    false_negatives = sum(not r.model_eval and r.human_eval for r in results)
+    """Calculate classification metrics, including agreement and correlation.
 
-    precision = safe_div(true_positives, true_positives + false_positives)
-    recall = safe_div(true_positives, true_positives + false_negatives)
-    f1 = safe_div(2 * precision * recall, precision + recall)
+    For classification, use accuracy and macro-averaged F1, precision and recall. For
+    correlation, use Spearman's R, and for agreement, Cohen's Kappa.
 
+    Since the evaluations are majority "valid", a high accuracy doesn't mean much (a
+    naive 100% classifier has 82% accuracy). Using a macro-averaged score means both
+    classes get equal weight, which is more representative of the result.
+    """
     y_true = [r.human_eval for r in results]
     y_pred = [r.model_eval for r in results]
-    accuracy = sum(yt == yp for yt, yp in zip(y_true, y_pred)) / len(results)
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
+
+        accuracy = accuracy_score(y_true, y_pred)
+        precision, recall, f1, _ = precision_recall_fscore_support(  # type: ignore
+            y_true,
+            y_pred,
+            average="macro",
+            zero_division=0,  # type: ignore
+        )
         kappa = cohen_kappa_score(y_true, y_pred)
         spearman = cast(float, spearmanr(y_true, y_pred)[0])
 
