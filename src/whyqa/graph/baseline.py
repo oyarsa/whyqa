@@ -49,6 +49,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 @dataclass
 class DatasetItem:
+    id: str
     query: str
     texts: Sequence[str]
     answer: str
@@ -56,6 +57,7 @@ class DatasetItem:
 
 @dataclass
 class OutputItem:
+    id: str
     query: str
     texts: Sequence[str]
     expected_answer: str
@@ -67,7 +69,12 @@ def load_dataset(file_path: Path) -> list[DatasetItem]:
     """Load the dataset from a JSON file."""
     data: list[dict[str, Any]] = json.loads(file_path.read_text())
     return [
-        DatasetItem(query=item["query"], texts=item["texts"], answer=item["answer"])
+        DatasetItem(
+            id=item["id"],
+            query=item["query"],
+            texts=item["texts"],
+            answer=item["answer"],
+        )
         for item in data
     ]
 
@@ -257,6 +264,7 @@ def main(
         similarity = calculate_similarity(predicted_answer, item.answer, senttf_model)
 
         output_item = OutputItem(
+            id=item.id,
             query=item.query,
             texts=item.texts,
             expected_answer=item.answer,
