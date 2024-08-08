@@ -32,9 +32,12 @@ answers.
 """
 
 import argparse
+import hashlib
 import json
+import os
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -44,11 +47,20 @@ from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
 
-@dataclass()
+@dataclass
 class DatasetItem:
     query: str
     texts: Sequence[str]
     answer: str
+
+
+@dataclass
+class OutputItem:
+    query: str
+    texts: Sequence[str]
+    expected_answer: str
+    generated_answer: str
+    similarity_score: float
 
 
 def load_dataset(file_path: Path) -> list[DatasetItem]:
@@ -85,7 +97,7 @@ class GPTClient:
             return ""
 
 
-def build_causal_graph(client: GPTClient, text: str) -> nx.DiGraph[Any]:
+def build_causal_graph(client: GPTClient, text: str) -> nx.DiGraph:
     """Build a causal graph from the given text using the OpenAI API."""
     prompt = f"""Extract causal relationships from the following text and represent them as a list of (cause, effect) pairs.
 Use the format 'cause -> effect' for each relationship, with one relationship per line.
@@ -209,14 +221,33 @@ def calculate_similarity(text1: str, text2: str, model: SentenceTransformer) -> 
 
 
 def main(
-    dataset_path: Path, api_key: str, senttf_model_name: str, gpt_model_name: str
+    dataset_path: Path,
+    api_key: str | None,
+    senttf_model_name: str,
+    gpt_model_name: str,
+    output_path: Path,
+    run_name: str | None,
 ) -> None:
     """Process the dataset and evaluate answers."""
+    if api_key is None:
+        api_key = os.environ["OPENAI_API_KEY"]
+    if not run_name:
+        run_name = f"{gpt_model_name}-{datetime.now(UTC).isoformat()}"
+
     client = GPTClient(api_key, gpt_model_name)
     dataset = load_dataset(dataset_path)
     senttf_model = SentenceTransformer(senttf_model_name)
 
-    total_similarity = 0.0
+    config = {
+        "dataset_path": str(dataset_path),
+        "dataset_sha256": hashlib.sha256(dataset_path.read_bytes()).hexdigest(),
+        "senttf_model": senttf_model_name,
+        "gpt_model": gpt_model_name,
+        "run_name": run_name,
+        "timestamp": datetime.now().isoformat(),
+    }
+
+    output_items: list[OutputItem] = []
 
     for i, item in enumerate(dataset, 1):
         graphs = [build_causal_graph(client, text) for text in item.texts]
@@ -224,7 +255,15 @@ def main(
         summarized_graph = summarize_graph(client, combined_graph)
         predicted_answer = answer_question(client, summarized_graph, item.query)
         similarity = calculate_similarity(predicted_answer, item.answer, senttf_model)
-        total_similarity += similarity
+
+        output_item = OutputItem(
+            query=item.query,
+            texts=item.texts,
+            expected_answer=item.answer,
+            generated_answer=predicted_answer,
+            similarity_score=similarity,
+        )
+        output_items.append(output_item)
 
         print(f"Item {i}/{len(dataset)}:")
         print(f"Query: {item.query}")
@@ -233,8 +272,18 @@ def main(
         print(f"Similarity Score: {similarity:.4f}\n")
         print()
 
-    avg_similarity = total_similarity / len(dataset)
+    avg_similarity = sum(item.similarity_score for item in output_items) / len(
+        output_items
+    )
     print(f"Average Similarity Score: {avg_similarity:.4f}")
+
+    output_dir = output_path / run_name
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    (output_dir / "result.json").write_text(
+        json.dumps([asdict(item) for item in output_items], indent=2)
+    )
+    (output_dir / "config.json").write_text(json.dumps(config, indent=2))
 
 
 if __name__ == "__main__":
@@ -244,7 +293,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "dataset_path", type=Path, help="Path to the JSON file containing the dataset"
     )
-    parser.add_argument("--api-key", required=True, help="OpenAI API key")
+    parser.add_argument(
+        "--api-key",
+        help="OpenAI API key. Defaults to the OPENAI_API_KEY environment variable",
+    )
     parser.add_argument(
         "--senttf-model",
         default="all-MiniLM-L6-v2",
@@ -255,5 +307,24 @@ if __name__ == "__main__":
         default="gpt-4o-mini",
         help="OpenAI GPT model name (default: %(default)s)",
     )
+    parser.add_argument(
+        "--run-name",
+        default=None,
+        help="Run name to store outputs (default: {GPT model}-{ISO timestamp})",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default="output",
+        help="Path to output directory (default: %(default)s)",
+    )
     args = parser.parse_args()
-    main(args.dataset_path, args.api_key, args.senttf_model, args.gpt_model)
+
+    main(
+        args.dataset_path,
+        args.api_key,
+        args.senttf_model,
+        args.gpt_model,
+        args.output_dir,
+        args.run_name,
+    )
