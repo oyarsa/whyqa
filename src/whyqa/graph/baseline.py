@@ -1,10 +1,34 @@
 # pyright: basic
-"""This script uses the OpenAI API to process a dataset, build causal graphs,
-and evaluate answers using sentence embeddings.
+"""Answer a WhyQA dataset using causal graphs and OpenAI API.
 
 It loads a dataset from a JSON file, builds causal graphs for each item,
 combines the graphs, summarizes nodes, generates answers using the OpenAI API,
 and evaluates the answers using sentence embeddings.
+
+This loads a dataset from a JSON file, and for each item in the dataset:
+- Extracts causal relationships from each supporting text
+- Combines the extracted relationships into a single causal graph
+- Summarises the combined nodes in the graph
+- Generates an answer to the question using the causal graph
+- Evaluates the generated answer using cosine similarity with the expected answer using
+sentence embeddings from SentenceTransformer
+
+The dataset is a JSON file containg a list of items, each with the following keys:
+- query (str): The question to answer.
+- texts (list[str]): A list of texts to extract causal relationships from.
+- answer (str): The expected answer to the question.
+
+The output directory contains a subdirectory for each run, with the following files:
+- result.json: A JSON file containing the results.
+- config.json: A JSON file containing the configuration used for the run.
+
+The `result.json` file contains a list of items, each with the following keys:
+- query (str): The question.
+- texts (list[str]): The list of texts.
+- expected_answer (str): The expected answer.
+- generated_answer (str): The generated answer.
+- similarity_score (float): The similarity score between the expected and generated
+answers.
 """
 
 import argparse
