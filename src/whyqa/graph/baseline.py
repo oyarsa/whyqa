@@ -2,7 +2,7 @@
 """Answer a WhyQA dataset using causal graphs and OpenAI API.
 
 It loads a dataset from a JSON file, builds causal graphs for each item,
-combines the graphs, summarizes nodes, generates answers using the OpenAI API,
+combines the graphs, summarises nodes, generates answers using the OpenAI API,
 and evaluates the answers using sentence embeddings.
 
 This loads a dataset from a JSON file, and for each item in the dataset:
@@ -195,23 +195,23 @@ def combine_graphs(
     return combined_graph
 
 
-def summarize_graph(client: GPTClient, item_id: str, graph: nx.DiGraph) -> nx.DiGraph:
-    """Summarize nodes in the graph, especially composite nodes."""
-    summarized_graph = nx.DiGraph()
+def summarise_graph(client: GPTClient, item_id: str, graph: nx.DiGraph) -> nx.DiGraph:
+    """Summarise nodes in the graph, especially composite nodes."""
+    summarised_graph = nx.DiGraph()
 
     for node in graph.nodes():
         if " / " in node:
-            summary = summarize_nodes(client, item_id, node.split(" / "))
+            summary = summarise_nodes(client, item_id, node.split(" / "))
         else:
             summary = node
 
-        summarized_graph.add_node(summary)
+        summarised_graph.add_node(summary)
         for predecessor in graph.predecessors(node):
-            summarized_graph.add_edge(predecessor, summary)
+            summarised_graph.add_edge(predecessor, summary)
         for successor in graph.successors(node):
-            summarized_graph.add_edge(summary, successor)
+            summarised_graph.add_edge(summary, successor)
 
-    return summarized_graph
+    return summarised_graph
 
 
 def remove_prefix(string: str, prefix: str) -> str:
@@ -225,9 +225,9 @@ def remove_prefix(string: str, prefix: str) -> str:
     return string
 
 
-def summarize_nodes(client: GPTClient, item_id: str, nodes: Sequence[str]) -> str:
-    """Summarize a set of similar nodes into a single description."""
-    prompt = f"""Summarize the following related events into a single, concise description:
+def summarise_nodes(client: GPTClient, item_id: str, nodes: Sequence[str]) -> str:
+    """Summarise a set of similar nodes into a single description."""
+    prompt = f"""Summarise the following related events into a single, concise description:
 
 Events:
 {"\n".join(f"- {node}" for node in nodes)}
@@ -237,7 +237,7 @@ Summary:"""
     summary = remove_prefix(response, "Summary:")
 
     if not summary:
-        print(f"WARNING: Failed to summarize nodes: {nodes}", file=sys.stderr)
+        print(f"WARNING: Failed to summarise nodes: {nodes}", file=sys.stderr)
         summary = " / ".join(nodes)
 
     return summary
@@ -284,7 +284,7 @@ def calculate_similarity(text1: str, text2: str, model: SentenceTransformer) -> 
     """Calculate the cosine similarity between two texts using sentence embeddings."""
     embeddings = model.encode([text1, text2])
     similarity = cosine_similarity([embeddings[0]], [embeddings[1]])[0][0]
-    return (similarity + 1) / 2  # Normalize to [0, 1]
+    return (similarity + 1) / 2  # Normalise to [0, 1]
 
 
 def main(
@@ -319,9 +319,9 @@ def main(
     for i, item in enumerate(dataset, 1):
         graphs = [build_causal_graph(client, item.id, text) for text in item.texts]
         combined_graph = combine_graphs(client, item.id, graphs)
-        summarized_graph = summarize_graph(client, item.id, combined_graph)
+        summarised_graph = summarise_graph(client, item.id, combined_graph)
         predicted_answer = answer_question(
-            client, item.id, summarized_graph, item.query
+            client, item.id, summarised_graph, item.query
         )
         similarity = calculate_similarity(predicted_answer, item.answer, senttf_model)
 
