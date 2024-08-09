@@ -330,12 +330,11 @@ def main(
     )
     (output_dir / "config.json").write_text(json.dumps(config, indent=2))
 
-    # Convert APIInteraction objects to dictionaries before JSON serialization
-    serializable_log = {
+    log_serialisable = {
         item_id: [asdict(interaction) for interaction in interactions]
         for item_id, interactions in client._log.items()
     }
-    (output_dir / "log.json").write_text(json.dumps(serializable_log, indent=2))
+    (output_dir / "log.json").write_text(json.dumps(log_serialisable, indent=2))
 
 
 if __name__ == "__main__":
