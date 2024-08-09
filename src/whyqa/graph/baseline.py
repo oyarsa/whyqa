@@ -42,6 +42,7 @@ import copy
 import hashlib
 import json
 import os
+import sys
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass
@@ -213,6 +214,17 @@ def summarize_graph(client: GPTClient, item_id: str, graph: nx.DiGraph) -> nx.Di
     return summarized_graph
 
 
+def remove_prefix(string: str, prefix: str) -> str:
+    """Remove a prefix from a string if it exists.
+
+    If the string starts with the prefix, remove the prefix and any leading whitespace
+    after it. If the prefix is not found, return the original string unchanged.
+    """
+    if string.startswith(prefix):
+        return string[len(prefix) :].lstrip()
+    return string
+
+
 def summarize_nodes(client: GPTClient, item_id: str, nodes: Sequence[str]) -> str:
     """Summarize a set of similar nodes into a single description."""
     prompt = f"""Summarize the following related events into a single, concise description:
@@ -221,15 +233,24 @@ Events:
 {"\n".join(f"- {node}" for node in nodes)}
 
 Summary:"""
+    response = client.call_openai_api(item_id, prompt)
+    summary = remove_prefix(response, "Summary:")
 
-    return client.call_openai_api(item_id, prompt)
+    if not summary:
+        print(f"WARNING: Failed to summarize nodes: {nodes}", file=sys.stderr)
+        summary = " / ".join(nodes)
+
+    return summary
 
 
 def are_nodes_similar(client: GPTClient, item_id: str, node1: str, node2: str) -> bool:
     """Determine if two nodes are similar enough to be considered the same."""
     prompt = f"Are these two events essentially the same? Answer with 'Yes' or 'No':\n1. {node1}\n2. {node2}\nAnswer:"
-    response = client.call_openai_api(item_id, prompt)
-    return response.lower() == "yes"
+    response = client.call_openai_api(item_id, prompt).lower()
+    if response not in {"yes", "no"}:
+        print(f"WARNING: Invalid response: {response}", file=sys.stderr)
+        return False
+    return response == "yes"
 
 
 def answer_question(
@@ -247,12 +268,16 @@ Question:
 
 Answer:"""
     response = client.call_openai_api(item_id, prompt)
+    answer = remove_prefix(response, "Answer:")
 
-    # Parse the answer from the response
-    answer_prefix = "Answer:"
-    if answer_prefix in response:
-        return response.split(answer_prefix, 1)[1].strip()
-    return response.strip()
+    if not answer:
+        print(
+            f"WARNING: Failed to generate answer for question: {question}",
+            file=sys.stderr,
+        )
+        answer = "Unable to generate answer"
+
+    return answer
 
 
 def calculate_similarity(text1: str, text2: str, model: SentenceTransformer) -> float:
