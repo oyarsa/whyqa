@@ -21,6 +21,7 @@ The dataset is a JSON file containg a list of items, each with the following key
 The output directory contains a subdirectory for each run, with the following files:
 - result.json: A JSON file containing the results.
 - config.json: A JSON file containing the configuration used for the run.
+- log.json: A JSON file containing logs of all interactions with the OpenAI API.
 
 The `result.json` file contains a list of items, each with the following keys:
 - query (str): The question.
@@ -29,13 +30,20 @@ The `result.json` file contains a list of items, each with the following keys:
 - generated_answer (str): The generated answer.
 - similarity_score (float): The similarity score between the expected and generated
 answers.
+
+The `log.json` file contains an object where each key is an item ID and the value is
+a list of objects, each containing:
+- role (str): Either "user" or "assistant".
+- data (str): The prompt sent to the API or the API response.
 """
 
 import argparse
+import copy
 import hashlib
 import json
 import os
-from collections.abc import Sequence
+from collections import defaultdict
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -65,6 +73,12 @@ class OutputItem:
     similarity_score: float
 
 
+@dataclass
+class APIInteraction:
+    role: str
+    data: str
+
+
 def load_dataset(file_path: Path) -> list[DatasetItem]:
     """Load the dataset from a JSON file."""
     data: list[dict[str, Any]] = json.loads(file_path.read_text())
@@ -83,10 +97,16 @@ class GPTClient:
     def __init__(self, api_key: str, model: str) -> None:
         self.client = openai.OpenAI(api_key=api_key)
         self.model = model
+        self._log: dict[str, list[APIInteraction]] = defaultdict(list)
 
-    def call_openai_api(self, prompt: str) -> str:
-        """Call the OpenAI API with the given prompt."""
+    def call_openai_api(self, item_id: str, prompt: str) -> str:
+        """Call the OpenAI API with the given prompt.
+
+        Logs the interaction per item id (user prompt and assistant result) and returns
+        the result. The log can be obtained from the `log` attribute.
+        """
         try:
+            self._log[item_id].append(APIInteraction(role="user", data=prompt))
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
@@ -95,16 +115,23 @@ class GPTClient:
                 ],
                 max_tokens=150,
             )
-            if result := response.choices[0].message.content:
-                return result
-            else:
-                return ""
-        except Exception as e:
+            result = response.choices[0].message.content or "<empty>"
+        except (openai.OpenAIError, IndexError) as e:
             print(f"Error calling OpenAI API: {e}")
+            self._log[item_id].append(
+                APIInteraction(role="assistant", data=f"Error: {e}")
+            )
             return ""
+        else:
+            self._log[item_id].append(APIInteraction(role="assistant", data=result))
+            return result.strip()
+
+    @property
+    def log(self) -> Mapping[str, Sequence[APIInteraction]]:
+        return copy.deepcopy(self._log)
 
 
-def build_causal_graph(client: GPTClient, text: str) -> nx.DiGraph:
+def build_causal_graph(client: GPTClient, item_id: str, text: str) -> nx.DiGraph:
     """Build a causal graph from the given text using the OpenAI API."""
     prompt = f"""Extract causal relationships from the following text and represent them as a list of (cause, effect) pairs.
 Use the format 'cause -> effect' for each relationship, with one relationship per line.
@@ -115,7 +142,7 @@ Text:
 
 Causal relationships:"""
 
-    response = client.call_openai_api(prompt)
+    response = client.call_openai_api(item_id, prompt)
 
     graph = nx.DiGraph()
     for line in response.split("\n"):
@@ -126,7 +153,9 @@ Causal relationships:"""
     return graph
 
 
-def combine_graphs(client: GPTClient, graphs: Sequence[nx.DiGraph]) -> nx.DiGraph:
+def combine_graphs(
+    client: GPTClient, item_id: str, graphs: Sequence[nx.DiGraph]
+) -> nx.DiGraph:
     """Combine multiple graphs into a single graph, de-duplicating nodes."""
     combined_graph = nx.DiGraph()
     node_mapping = {}
@@ -137,7 +166,7 @@ def combine_graphs(client: GPTClient, graphs: Sequence[nx.DiGraph]) -> nx.DiGrap
                 if similar_nodes := [
                     n
                     for n in combined_graph.nodes()
-                    if are_nodes_similar(client, node, n)
+                    if are_nodes_similar(client, item_id, node, n)
                 ]:
                     # Create a new node that combines all similar nodes
                     combined_node = " / ".join([node, *similar_nodes])
@@ -161,13 +190,13 @@ def combine_graphs(client: GPTClient, graphs: Sequence[nx.DiGraph]) -> nx.DiGrap
     return combined_graph
 
 
-def summarize_graph(client: GPTClient, graph: nx.DiGraph) -> nx.DiGraph:
+def summarize_graph(client: GPTClient, item_id: str, graph: nx.DiGraph) -> nx.DiGraph:
     """Summarize nodes in the graph, especially composite nodes."""
     summarized_graph = nx.DiGraph()
 
     for node in graph.nodes():
         if " / " in node:
-            summary = summarize_nodes(client, node.split(" / "))
+            summary = summarize_nodes(client, item_id, node.split(" / "))
         else:
             summary = node
 
@@ -180,7 +209,7 @@ def summarize_graph(client: GPTClient, graph: nx.DiGraph) -> nx.DiGraph:
     return summarized_graph
 
 
-def summarize_nodes(client: GPTClient, nodes: Sequence[str]) -> str:
+def summarize_nodes(client: GPTClient, item_id: str, nodes: Sequence[str]) -> str:
     """Summarize a set of similar nodes into a single description."""
     prompt = f"""Summarize the following related events into a single, concise description:
 
@@ -189,17 +218,19 @@ Events:
 
 Summary:"""
 
-    return client.call_openai_api(prompt)
+    return client.call_openai_api(item_id, prompt)
 
 
-def are_nodes_similar(client: GPTClient, node1: str, node2: str) -> bool:
+def are_nodes_similar(client: GPTClient, item_id: str, node1: str, node2: str) -> bool:
     """Determine if two nodes are similar enough to be considered the same."""
     prompt = f"Are these two events essentially the same? Answer with 'Yes' or 'No':\n1. {node1}\n2. {node2}\nAnswer:"
-    response = client.call_openai_api(prompt)
+    response = client.call_openai_api(item_id, prompt)
     return response.lower() == "yes"
 
 
-def answer_question(client: GPTClient, graph: nx.DiGraph, question: str) -> str:
+def answer_question(
+    client: GPTClient, item_id: str, graph: nx.DiGraph, question: str
+) -> str:
     """Generate an answer to the question using the causal graph."""
     graph_repr = "\n".join([f"{edge[0]} -> {edge[1]}" for edge in graph.edges()])
     prompt = f"""Using the following causal graph, answer the question:
@@ -211,7 +242,7 @@ Question:
 {question}
 
 Answer:"""
-    response = client.call_openai_api(prompt)
+    response = client.call_openai_api(item_id, prompt)
 
     # Parse the answer from the response
     answer_prefix = "Answer:"
@@ -257,10 +288,12 @@ def main(
     output_items: list[OutputItem] = []
 
     for i, item in enumerate(dataset, 1):
-        graphs = [build_causal_graph(client, text) for text in item.texts]
-        combined_graph = combine_graphs(client, graphs)
-        summarized_graph = summarize_graph(client, combined_graph)
-        predicted_answer = answer_question(client, summarized_graph, item.query)
+        graphs = [build_causal_graph(client, item.id, text) for text in item.texts]
+        combined_graph = combine_graphs(client, item.id, graphs)
+        summarized_graph = summarize_graph(client, item.id, combined_graph)
+        predicted_answer = answer_question(
+            client, item.id, summarized_graph, item.query
+        )
         similarity = calculate_similarity(predicted_answer, item.answer, senttf_model)
 
         output_item = OutputItem(
@@ -292,6 +325,13 @@ def main(
         json.dumps([asdict(item) for item in output_items], indent=2)
     )
     (output_dir / "config.json").write_text(json.dumps(config, indent=2))
+
+    # Convert APIInteraction objects to dictionaries before JSON serialization
+    serializable_log = {
+        item_id: [asdict(interaction) for interaction in interactions]
+        for item_id, interactions in client._log.items()
+    }
+    (output_dir / "log.json").write_text(json.dumps(serializable_log, indent=2))
 
 
 if __name__ == "__main__":
