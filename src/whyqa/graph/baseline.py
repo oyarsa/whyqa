@@ -100,7 +100,11 @@ class GPTClient:
         self._log: dict[str, list[APIInteraction]] = defaultdict(list)
 
     def call_openai_api(self, item_id: str, prompt: str) -> str:
-        """Call the OpenAI API with the given prompt.
+        """Call the OpenAI API with the given prompt. Returns the response.
+
+        If there was an error calling the API, logs the error and returns an empty
+        string. Otherwise, returns the response string with leading and trailing
+        whitespace removed.
 
         Logs the interaction per item id (user prompt and assistant result) and returns
         the result. The log can be obtained from the `log` attribute.
