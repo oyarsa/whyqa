@@ -322,6 +322,7 @@ def main(
     output_path: Path,
     run_name: str | None,
     max_texts: int | None,
+    seed: int,
 ) -> None:
     """Process the dataset and evaluate answers."""
     warnings.filterwarnings(
@@ -334,7 +335,7 @@ def main(
     if not run_name:
         run_name = f"{gpt_model_name}-{datetime.now(UTC).isoformat()}"
 
-    client = GPTClient(api_key, gpt_model_name)
+    client = GPTClient(api_key, gpt_model_name, seed)
     dataset = load_dataset(dataset_path)
     senttf_model = SentenceTransformer(senttf_model_name)
 
@@ -445,6 +446,12 @@ if __name__ == "__main__":
         default=None,
         help="Maximum number of texts to process per item (default: all)",
     )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=0,
+        help="Seed for the OpenAI API (default: %(default)s)",
+    )
     args = parser.parse_args()
 
     main(
@@ -455,4 +462,5 @@ if __name__ == "__main__":
         args.output_dir,
         args.run_name,
         args.max_texts,
+        args.seed,
     )
