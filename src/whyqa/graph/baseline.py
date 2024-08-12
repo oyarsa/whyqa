@@ -148,6 +148,8 @@ def build_causal_graph(client: GPTClient, item_id: str, text: str) -> nx.DiGraph
     prompt = f"""Extract causal relationships from the following text and represent them as a list of (cause, effect) pairs.
 Use the format 'cause -> effect' for each relationship, with one relationship per line.
 If there are no clear causal relationships, return an empty list.
+Each line must be only "node1 -> node2" without any additional text or formatting.
+Only proper nouns should be capitalised; anything else should be lowercase.
 
 Text:
 {text}
