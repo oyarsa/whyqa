@@ -406,6 +406,7 @@ def main(
 
         print("  Combining causal graphs.")
         combined_graph = combine_graphs(client, item.id, graphs)
+        report_graphs([combined_graph])
 
         print("  Answering question.")
         predicted_answer = answer_question(client, item.id, combined_graph, item.query)
@@ -423,6 +424,7 @@ def main(
         )
         output_items.append(output_item)
 
+        print()
         print(f"Query: {item.query}")
         print(f"Predicted Answer: {predicted_answer}")
         print(f"Expected Answer: {item.answer}")
