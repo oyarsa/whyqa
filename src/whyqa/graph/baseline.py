@@ -358,6 +358,7 @@ def main(
     run_name: str | None,
     max_texts: int | None,
     seed: int,
+    max_samples: int | None,
 ) -> None:
     """Process the dataset and evaluate answers."""
     warnings.filterwarnings(
@@ -383,6 +384,7 @@ def main(
         "timestamp": datetime.now().isoformat(),
     }
 
+    dataset = dataset[:max_samples]
     output_items: list[OutputItem] = []
 
     for i, item in enumerate(dataset, 1):
@@ -488,6 +490,9 @@ if __name__ == "__main__":
         default=0,
         help="Seed for the OpenAI API (default: %(default)s)",
     )
+    parser.add_argument(
+        "--max-samples", "-n", type=int, default=None, help="Maximum number of samples"
+    )
     args = parser.parse_args()
 
     main(
@@ -499,4 +504,5 @@ if __name__ == "__main__":
         args.run_name,
         args.max_texts,
         args.seed,
+        args.max_samples,
     )
