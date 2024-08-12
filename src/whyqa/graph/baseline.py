@@ -335,7 +335,7 @@ Answer:"""
 def calculate_similarity(text1: str, text2: str, model: SentenceTransformer) -> float:
     """Calculate the cosine similarity between two texts using sentence embeddings."""
     embeddings = model.encode([text1, text2])
-    similarity = cosine_similarity([embeddings[0]], [embeddings[1]])[0][0]
+    similarity = float(cosine_similarity([embeddings[0]], [embeddings[1]])[0][0])
     return (similarity + 1) / 2  # Normalise to [0, 1]
 
 
