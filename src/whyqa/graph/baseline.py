@@ -192,14 +192,7 @@ Text:
 Causal relationships:"""
 
     response = client.call_openai_api(item_id, prompt)
-
-    graph = nx.DiGraph()
-    for line in response.split("\n"):
-        if "->" in line:
-            cause, effect = map(str.strip, line.split("->"))
-            graph.add_edge(cause, effect)
-
-    return graph
+    return parse_graph(response)
 
 
 def remove_prefix(string: str, prefix: str) -> str:
@@ -231,82 +224,66 @@ Summary:"""
     return summary
 
 
-def are_nodes_similar(client: GPTClient, item_id: str, node1: str, node2: str) -> bool:
-    """Use the LLM to determine if two nodes are similar enough to be merged.
+def parse_graph(graph_str: str) -> nx.DiGraph:
+    """Parse a string of causal relationships into a DiGraph.
 
     Args:
-        client: An instance of GPTClient for making LLM API calls.
-        item_id: A unique identifier for logging purposes.
-        node1: The name of the first node.
-        node2: The name of the second node.
+        graph_str: A string containing causal relationships, one per line.
+            Each line should be in the format "cause -> effect".
+            Empty lines and lines without "->" are ignored.
+            Leading and trailing whitespace in cause and effect is stripped.
 
     Returns:
-        True if the nodes are considered similar, False otherwise.
+        A NetworkX DiGraph representing the causal relationships.
+
+    Example input:
+        "
+        event A -> consequence B
+        factor X -> outcome Y
+        cause 1 -> effect 1
+        cause 1 -> effect 2
+        "
+
+    Note:
+        - The function is case-sensitive; "Event A" and "event A" are treated as
+          different nodes.
+        - If the same causal relationship appears multiple times in the input,
+          only one edge will be created in the graph.
+        - The function does not validate the semantic correctness of the relationships;
+          it only parses the syntactic structure.
     """
-    prompt = f"""
-    Are the following two nodes similar enough to be considered the same?
-    Node 1: {node1}
-    Node 2: {node2}
-    Please respond with only 'Yes' or 'No'.
-    Answer:
-    """
-    response = client.call_openai_api(item_id, prompt)
-    response = remove_prefix(response, "Answer:").strip().lower()
-    if response not in {"yes", "no"}:
-        print(
-            f"WARNING: Unexpected response from LLM in `are_nodes_similar`: {response}",
-            file=sys.stderr,
-        )
-    return response == "yes"
+    graph = nx.DiGraph()
+    for line in graph_str.split("\n"):
+        if "->" in line:
+            cause, effect = map(str.strip, line.split("->"))
+            graph.add_edge(cause, effect)
+    return graph
 
 
 def combine_graphs(
     client: GPTClient, item_id: str, graphs: Iterable[nx.DiGraph]
 ) -> nx.DiGraph:
-    """Combine multiple graphs into a single graph, de-duplicating nodes.
-
-    This function merges multiple directed graphs into a single graph, identifying
-    and combining similar nodes using an LLM. The edge structure is maintained
-    while similar nodes are merged.
-
-    Args:
-        client: The client for making LLM API calls.
-        item_id: The item identifier (for logging purposes).
-        graphs: An iterable of directed graphs to be combined.
-
-    Returns:
-        A single directed graph with de-duplicated nodes and merged edges.
-
-    Raises:
-        ValueError: If the input sequence of graphs is empty.
-    """
+    """Combine multiple graphs into a single graph using the LLM."""
     if not graphs:
         raise ValueError("At least one graph must be provided.")
 
-    combined_graph = nx.DiGraph()
-    node_mapping: dict[str, str] = {}
+    graph_representations: list[str] = []
+    for i, graph in enumerate(graphs, 1):
+        edges = (f"{src} -> {dst}" for src, dst in graph.edges())
+        graph_representations.append(f"Graph {i}:\n" + "\n".join(edges))
 
-    for graph in graphs:
-        for node in graph.nodes():
-            if similar_node := next(
-                (
-                    existing_node
-                    for existing_node in combined_graph.nodes()
-                    if are_nodes_similar(client, item_id, node, existing_node)
-                ),
-                None,
-            ):
-                print(f"Found similar node: {node} -> {similar_node}")
-                node_mapping[node] = similar_node
-            else:
-                print(f"No similar node found for: {node}")
-                combined_graph.add_node(node)
-                node_mapping[node] = node
+    prompt = f"""Given the following causal graphs, combine them into a single coherent graph.
+Merge similar nodes and remove redundancies. Present the result as a list of causal \
+relationships in the format 'cause -> effect', one per line.
+Each line must be only "node1 -> node2" without any additional text or formatting.
 
-        for src, dst in graph.edges():
-            combined_graph.add_edge(node_mapping[src], node_mapping[dst])
+{"\n\n".join(graph_representations)}
 
-    return combined_graph
+Combined graph:"""
+
+    response = client.call_openai_api(item_id, prompt)
+    response = remove_prefix(response, "Combined graph:")
+    return parse_graph(response)
 
 
 def answer_question(
