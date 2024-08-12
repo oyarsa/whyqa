@@ -50,6 +50,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+import dotenv
 import networkx as nx
 import openai
 from sentence_transformers import SentenceTransformer
@@ -296,6 +297,7 @@ def main(
     run_name: str | None,
 ) -> None:
     """Process the dataset and evaluate answers."""
+    dotenv.load_dotenv()
     if api_key is None:
         api_key = os.environ["OPENAI_API_KEY"]
     if not run_name:
@@ -371,7 +373,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--api-key",
-        help="OpenAI API key. Defaults to the OPENAI_API_KEY environment variable",
+        help="OpenAI API key. Defaults to the OPENAI_API_KEY env var (including .env)",
     )
     parser.add_argument(
         "--senttf-model",
