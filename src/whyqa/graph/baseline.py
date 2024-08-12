@@ -192,7 +192,6 @@ Text:
 Causal relationships:"""
 
     response = client.call_openai_api(item_id, prompt)
-    print(response)
 
     graph = nx.DiGraph()
     for line in response.split("\n"):
@@ -345,7 +344,12 @@ def report_graphs(graphs: Sequence[nx.DiGraph]) -> None:
     for i, graph in enumerate(graphs, 1):
         print(f"    Graph {i}:")
         print(f"      Nodes: {len(graph.nodes())}")  # type: ignore
+        for node in graph.nodes():
+            print(f"        {node}")
         print(f"      Edges: {len(graph.edges())}")
+        for edge in graph.edges():
+            print(f"        {edge[0]} -> {edge[1]}")
+        print()
     print()
 
 
