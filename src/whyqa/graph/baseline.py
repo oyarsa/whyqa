@@ -45,7 +45,7 @@ import os
 import sys
 import warnings
 from collections import defaultdict
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -202,67 +202,6 @@ Causal relationships:"""
     return graph
 
 
-def combine_graphs(
-    client: GPTClient, item_id: str, graphs: Sequence[nx.DiGraph]
-) -> nx.DiGraph:
-    """Combine multiple graphs into a single graph, de-duplicating nodes."""
-    combined_graph = nx.DiGraph()
-    node_mapping: dict[str, str] = {}
-
-    for graph in graphs:
-        for node in graph.nodes():
-            if node in node_mapping:
-                continue
-
-            similar_nodes = [
-                n
-                for n in combined_graph.nodes()
-                if are_nodes_similar(client, item_id, node, n)
-            ]
-
-            if not similar_nodes:
-                node_mapping[node] = node
-                combined_graph.add_node(node)
-                continue
-
-            # Create a new node that combines all similar nodes
-            combined_node = " / ".join([node, *similar_nodes])
-            for similar_node in similar_nodes:
-                node_mapping[similar_node] = combined_node
-            node_mapping[node] = combined_node
-
-            # Update the combined graph
-            combined_graph.add_node(combined_node)
-            for similar_node in similar_nodes:
-                combined_graph = nx.relabel_nodes(
-                    combined_graph, {similar_node: combined_node}
-                )
-
-        for src, dst in graph.edges():
-            combined_graph.add_edge(node_mapping[src], node_mapping[dst])
-
-    return combined_graph
-
-
-def summarise_graph(client: GPTClient, item_id: str, graph: nx.DiGraph) -> nx.DiGraph:
-    """Summarise nodes in the graph, especially composite nodes."""
-    summarised_graph = nx.DiGraph()
-
-    for node in graph.nodes():
-        if " / " in node:
-            summary = summarise_nodes(client, item_id, node.split(" / "))
-        else:
-            summary = node
-
-        summarised_graph.add_node(summary)
-        for predecessor in graph.predecessors(node):
-            summarised_graph.add_edge(predecessor, summary)
-        for successor in graph.successors(node):
-            summarised_graph.add_edge(summary, successor)
-
-    return summarised_graph
-
-
 def remove_prefix(string: str, prefix: str) -> str:
     """Remove a prefix from a string if it exists.
 
@@ -293,15 +232,81 @@ Summary:"""
 
 
 def are_nodes_similar(client: GPTClient, item_id: str, node1: str, node2: str) -> bool:
-    """Determine if two nodes are similar enough to be considered the same."""
-    prompt = f"Are these two events essentially the same? Answer with 'Yes' or 'No':\n1. {node1}\n2. {node2}\nAnswer:"
-    response = client.call_openai_api(item_id, prompt).lower()
+    """Use the LLM to determine if two nodes are similar enough to be merged.
+
+    Args:
+        client: An instance of GPTClient for making LLM API calls.
+        item_id: A unique identifier for logging purposes.
+        node1: The name of the first node.
+        node2: The name of the second node.
+
+    Returns:
+        True if the nodes are considered similar, False otherwise.
+    """
+    prompt = f"""
+    Are the following two nodes similar enough to be considered the same?
+    Node 1: {node1}
+    Node 2: {node2}
+    Please respond with only 'Yes' or 'No'.
+    Answer:
+    """
+    response = client.call_openai_api(item_id, prompt)
+    response = remove_prefix(response, "Answer:").strip().lower()
     if response not in {"yes", "no"}:
-        print(f"WARNING: Invalid response: {response}", file=sys.stderr)
-        return False
-    answer = response == "yes"
-    print(f"Comparing nodes: {node1!r} and {node2!r} -> {answer} ({response})\n")
-    return answer
+        print(
+            f"WARNING: Unexpected response from LLM in `are_nodes_similar`: {response}",
+            file=sys.stderr,
+        )
+    return response == "yes"
+
+
+def combine_graphs(
+    client: GPTClient, item_id: str, graphs: Iterable[nx.DiGraph]
+) -> nx.DiGraph:
+    """Combine multiple graphs into a single graph, de-duplicating nodes.
+
+    This function merges multiple directed graphs into a single graph, identifying
+    and combining similar nodes using an LLM. The edge structure is maintained
+    while similar nodes are merged.
+
+    Args:
+        client: The client for making LLM API calls.
+        item_id: The item identifier (for logging purposes).
+        graphs: An iterable of directed graphs to be combined.
+
+    Returns:
+        A single directed graph with de-duplicated nodes and merged edges.
+
+    Raises:
+        ValueError: If the input sequence of graphs is empty.
+    """
+    if not graphs:
+        raise ValueError("At least one graph must be provided.")
+
+    combined_graph = nx.DiGraph()
+    node_mapping: dict[str, str] = {}
+
+    for graph in graphs:
+        for node in graph.nodes():
+            if similar_node := next(
+                (
+                    existing_node
+                    for existing_node in combined_graph.nodes()
+                    if are_nodes_similar(client, item_id, node, existing_node)
+                ),
+                None,
+            ):
+                print(f"Found similar node: {node} -> {similar_node}")
+                node_mapping[node] = similar_node
+            else:
+                print(f"No similar node found for: {node}")
+                combined_graph.add_node(node)
+                node_mapping[node] = node
+
+        for src, dst in graph.edges():
+            combined_graph.add_edge(node_mapping[src], node_mapping[dst])
+
+    return combined_graph
 
 
 def answer_question(
@@ -402,13 +407,8 @@ def main(
         print("  Combining causal graphs.")
         combined_graph = combine_graphs(client, item.id, graphs)
 
-        print("  Summarising causal graph.")
-        summarised_graph = summarise_graph(client, item.id, combined_graph)
-
         print("  Answering question.")
-        predicted_answer = answer_question(
-            client, item.id, summarised_graph, item.query
-        )
+        predicted_answer = answer_question(client, item.id, combined_graph, item.query)
 
         print("  Calculating similarity score.")
         similarity = calculate_similarity(predicted_answer, item.answer, senttf_model)
