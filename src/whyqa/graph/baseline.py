@@ -302,6 +302,7 @@ def main(
     gpt_model_name: str,
     output_path: Path,
     run_name: str | None,
+    max_texts: int | None,
 ) -> None:
     """Process the dataset and evaluate answers."""
     warnings.filterwarnings(
@@ -332,8 +333,9 @@ def main(
     for i, item in enumerate(dataset, 1):
         print(f"Item {i}/{len(dataset)}:")
 
-        print("  Building causal graphs.")
-        graphs = [build_causal_graph(client, item.id, text) for text in item.texts]
+        texts = item.texts[:max_texts]
+        print(f"  Building causal graphs. ({len(texts)} texts)")
+        graphs = [build_causal_graph(client, item.id, text) for text in texts]
         print("  Combining causal graphs.")
         combined_graph = combine_graphs(client, item.id, graphs)
         print("  Summarising causal graph.")
@@ -413,6 +415,12 @@ if __name__ == "__main__":
         default="output",
         help="Path to output directory (default: %(default)s)",
     )
+    parser.add_argument(
+        "--max-texts",
+        type=int,
+        default=None,
+        help="Maximum number of texts to process per item (default: all)",
+    )
     args = parser.parse_args()
 
     main(
@@ -422,4 +430,5 @@ if __name__ == "__main__":
         args.gpt_model,
         args.output_dir,
         args.run_name,
+        args.max_texts,
     )
