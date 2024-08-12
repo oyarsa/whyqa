@@ -164,34 +164,39 @@ def combine_graphs(
 ) -> nx.DiGraph:
     """Combine multiple graphs into a single graph, de-duplicating nodes."""
     combined_graph = nx.DiGraph()
-    node_mapping = {}
+    node_mapping: dict[str, str] = {}
 
     for graph in graphs:
         for node in graph.nodes():
-            if node not in node_mapping:
-                if similar_nodes := [
-                    n
-                    for n in combined_graph.nodes()
-                    if are_nodes_similar(client, item_id, node, n)
-                ]:
-                    # Create a new node that combines all similar nodes
-                    combined_node = " / ".join([node, *similar_nodes])
-                    for similar_node in similar_nodes:
-                        node_mapping[similar_node] = combined_node
-                    node_mapping[node] = combined_node
+            if node in node_mapping:
+                continue
 
-                    # Update the combined graph
-                    combined_graph.add_node(combined_node)
-                    for similar_node in similar_nodes:
-                        combined_graph = nx.relabel_nodes(
-                            combined_graph, {similar_node: combined_node}
-                        )
-                else:
-                    node_mapping[node] = node
-                    combined_graph.add_node(node)
+            similar_nodes = [
+                n
+                for n in combined_graph.nodes()
+                if are_nodes_similar(client, item_id, node, n)
+            ]
 
-        for edge in graph.edges():
-            combined_graph.add_edge(node_mapping[edge[0]], node_mapping[edge[1]])
+            if not similar_nodes:
+                node_mapping[node] = node
+                combined_graph.add_node(node)
+                continue
+
+            # Create a new node that combines all similar nodes
+            combined_node = " / ".join([node, *similar_nodes])
+            for similar_node in similar_nodes:
+                node_mapping[similar_node] = combined_node
+            node_mapping[node] = combined_node
+
+            # Update the combined graph
+            combined_graph.add_node(combined_node)
+            for similar_node in similar_nodes:
+                combined_graph = nx.relabel_nodes(
+                    combined_graph, {similar_node: combined_node}
+                )
+
+        for src, dst in graph.edges():
+            combined_graph.add_edge(node_mapping[src], node_mapping[dst])
 
     return combined_graph
 
