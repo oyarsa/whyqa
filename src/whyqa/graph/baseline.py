@@ -147,7 +147,7 @@ def build_causal_graph(client: GPTClient, item_id: str, text: str) -> nx.DiGraph
     """Build a causal graph from the given text using the OpenAI API."""
     prompt = f"""Extract causal relationships from the following text and represent them as a list of (cause, effect) pairs.
 Use the format 'cause -> effect' for each relationship, with one relationship per line.
-If there are no clear causal relationships, return an empty list.
+If there are no clear causal relationships, return nothing.
 Each line must be only "node1 -> node2" without any additional text or formatting.
 Only proper nouns should be capitalised; anything else should be lowercase.
 
@@ -157,6 +157,7 @@ Text:
 Causal relationships:"""
 
     response = client.call_openai_api(item_id, prompt)
+    print(response)
 
     graph = nx.DiGraph()
     for line in response.split("\n"):
@@ -264,7 +265,9 @@ def are_nodes_similar(client: GPTClient, item_id: str, node1: str, node2: str) -
     if response not in {"yes", "no"}:
         print(f"WARNING: Invalid response: {response}", file=sys.stderr)
         return False
-    return response == "yes"
+    answer = response == "yes"
+    print(f"Comparing nodes: {node1!r} and {node2!r} -> {answer} ({response})\n")
+    return answer
 
 
 def answer_question(
@@ -299,6 +302,16 @@ def calculate_similarity(text1: str, text2: str, model: SentenceTransformer) -> 
     embeddings = model.encode([text1, text2])
     similarity = cosine_similarity([embeddings[0]], [embeddings[1]])[0][0]
     return (similarity + 1) / 2  # Normalise to [0, 1]
+
+
+def report_graphs(graphs: Sequence[nx.DiGraph]) -> None:
+    """Print the number of graphs, nodes in each graph and edges in each graph."""
+    print(f"  Number of graphs: {len(graphs)}")
+    for i, graph in enumerate(graphs, 1):
+        print(f"    Graph {i}:")
+        print(f"      Nodes: {len(graph.nodes())}")  # type: ignore
+        print(f"      Edges: {len(graph.edges())}")
+    print()
 
 
 def main(
@@ -342,14 +355,19 @@ def main(
         texts = item.texts[:max_texts]
         print(f"  Building causal graphs. ({len(texts)} texts)")
         graphs = [build_causal_graph(client, item.id, text) for text in texts]
+        report_graphs(graphs)
+
         print("  Combining causal graphs.")
         combined_graph = combine_graphs(client, item.id, graphs)
+
         print("  Summarising causal graph.")
         summarised_graph = summarise_graph(client, item.id, combined_graph)
+
         print("  Answering question.")
         predicted_answer = answer_question(
             client, item.id, summarised_graph, item.query
         )
+
         print("  Calculating similarity score.")
         similarity = calculate_similarity(predicted_answer, item.answer, senttf_model)
 
