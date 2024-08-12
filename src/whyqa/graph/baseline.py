@@ -97,10 +97,11 @@ def load_dataset(file_path: Path) -> list[DatasetItem]:
 
 
 class GPTClient:
-    def __init__(self, api_key: str, model: str) -> None:
+    def __init__(self, api_key: str, model: str, seed: int) -> None:
         self.client = openai.OpenAI(api_key=api_key)
         self.model = model
         self._log: dict[str, list[APIInteraction]] = defaultdict(list)
+        self._seed = seed
 
     def call_openai_api(self, item_id: str, prompt: str) -> str:
         """Call the OpenAI API with the given prompt. Returns the response.
@@ -120,7 +121,7 @@ class GPTClient:
                     {"role": "system", "content": "You are a helpful assistant."},
                     {"role": "user", "content": prompt},
                 ],
-                max_tokens=150,
+                seed=self._seed,
             )
             result = response.choices[0].message.content or "<empty>"
         except (openai.OpenAIError, IndexError) as e:
