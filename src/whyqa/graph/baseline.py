@@ -324,12 +324,19 @@ def main(
     output_items: list[OutputItem] = []
 
     for i, item in enumerate(dataset, 1):
+        print(f"Item {i}/{len(dataset)}:")
+
+        print("  Building causal graphs.")
         graphs = [build_causal_graph(client, item.id, text) for text in item.texts]
+        print("  Combining causal graphs.")
         combined_graph = combine_graphs(client, item.id, graphs)
+        print("  Summarising causal graph.")
         summarised_graph = summarise_graph(client, item.id, combined_graph)
+        print("  Answering question.")
         predicted_answer = answer_question(
             client, item.id, summarised_graph, item.query
         )
+        print("  Calculating similarity score.")
         similarity = calculate_similarity(predicted_answer, item.answer, senttf_model)
 
         output_item = OutputItem(
@@ -342,7 +349,6 @@ def main(
         )
         output_items.append(output_item)
 
-        print(f"Item {i}/{len(dataset)}:")
         print(f"Query: {item.query}")
         print(f"Predicted Answer: {predicted_answer}")
         print(f"Expected Answer: {item.answer}")
