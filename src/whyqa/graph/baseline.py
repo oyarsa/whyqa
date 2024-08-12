@@ -98,11 +98,13 @@ def load_dataset(file_path: Path) -> list[DatasetItem]:
 
 class GPTClient:
     def __init__(self, api_key: str, model: str, seed: int) -> None:
-        self.client = openai.OpenAI(api_key=api_key)
-        self.model = model
+        self._client = openai.OpenAI(api_key=api_key)
+        self._model = model
         self._log: dict[str, list[APIInteraction]] = defaultdict(list)
         self._request_counter = 0
         self._seed = seed
+        self._input_tokens = 0
+        self._output_tokens = 0
 
     def call_openai_api(self, item_id: str, prompt: str) -> str:
         """Call the OpenAI API with the given prompt. Returns the response.
@@ -116,11 +118,11 @@ class GPTClient:
         """
         try:
             self._request_counter += 1
-            print(f"Calling OpenAI API ({self._request_counter})")
+            print(f"\t\t\tCalling OpenAI API ({self._request_counter})")
 
             self._log[item_id].append(APIInteraction(role="user", data=prompt))
-            response = self.client.chat.completions.create(
-                model=self.model,
+            response = self._client.chat.completions.create(
+                model=self._model,
                 messages=[
                     {"role": "system", "content": "You are a helpful assistant."},
                     {"role": "user", "content": prompt},
@@ -128,6 +130,10 @@ class GPTClient:
                 seed=self._seed,
             )
             result = response.choices[0].message.content or "<empty>"
+
+            if response.usage:
+                self._input_tokens += response.usage.prompt_tokens
+                self._output_tokens += response.usage.completion_tokens
         except (openai.OpenAIError, IndexError) as e:
             print(f"Error calling OpenAI API: {e}")
             self._log[item_id].append(
@@ -141,6 +147,35 @@ class GPTClient:
     @property
     def log(self) -> Mapping[str, Sequence[APIInteraction]]:
         return copy.deepcopy(self._log)
+
+    def calc_cost(self) -> float:
+        """Calculate the cost spent based on the number of tokens used."""
+        model_pricing = {
+            "gpt-3.5-turbo": (1, 2),
+            "gpt-3.5-turbo-0125": (0.5, 1.5),
+            "gpt-4": (30, 60),
+            "gpt-4-0613": (30, 60),
+            "gpt-4-turbo": (10, 30),
+            "gpt-4-turbo-2024-04-09": (10, 30),
+            "gpt-4o": (5, 15),
+            "gpt-4o-2024-05-13": (5, 15),
+            "gpt-4o-2024-08-06": (5, 15),
+            "gpt-4o-mini-2024-07-18": (0.15, 0.60),
+            "gpt-4o-mini": (0.15, 0.60),
+        }
+
+        if self._model not in model_pricing:
+            print(
+                f"WARNING: Pricing for model {self._model} is not available",
+                file=sys.stderr,
+            )
+            return float("nan")
+
+        input_, output = model_pricing[self._model]
+        input_cost = (self._input_tokens / 1e6) * input_
+        output_cost = (self._output_tokens / 1e6) * output
+
+        return input_cost + output_cost
 
 
 def build_causal_graph(client: GPTClient, item_id: str, text: str) -> nx.DiGraph:
@@ -392,6 +427,7 @@ def main(
         output_items
     )
     print(f"Average Similarity Score: {avg_similarity:.4f}")
+    print(f"Total Cost: ${client.calc_cost()}")
 
     output_dir = output_path / run_name
     output_dir.mkdir(parents=True, exist_ok=True)
