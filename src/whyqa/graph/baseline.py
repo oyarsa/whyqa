@@ -101,6 +101,7 @@ class GPTClient:
         self.client = openai.OpenAI(api_key=api_key)
         self.model = model
         self._log: dict[str, list[APIInteraction]] = defaultdict(list)
+        self._request_counter = 0
         self._seed = seed
 
     def call_openai_api(self, item_id: str, prompt: str) -> str:
@@ -114,6 +115,9 @@ class GPTClient:
         the result. The log can be obtained from the `log` attribute.
         """
         try:
+            self._request_counter += 1
+            print(f"Calling OpenAI API ({self._request_counter})")
+
             self._log[item_id].append(APIInteraction(role="user", data=prompt))
             response = self.client.chat.completions.create(
                 model=self.model,
