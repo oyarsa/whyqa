@@ -43,6 +43,7 @@ import hashlib
 import json
 import os
 import sys
+import warnings
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass
@@ -302,6 +303,10 @@ def main(
     run_name: str | None,
 ) -> None:
     """Process the dataset and evaluate answers."""
+    warnings.filterwarnings(
+        "ignore", category=FutureWarning, module="transformers.tokenization_utils_base"
+    )
+
     dotenv.load_dotenv()
     if api_key is None:
         api_key = os.environ["OPENAI_API_KEY"]
