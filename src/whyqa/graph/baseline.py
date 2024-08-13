@@ -106,15 +106,16 @@ class GPTClient:
         self._input_tokens = 0
         self._output_tokens = 0
 
-    def call_openai_api(self, item_id: str, prompt: str) -> str:
-        """Call the OpenAI API with the given prompt. Returns the response.
+    def run(self, item_id: str, prompt: str) -> str:
+        """Call the OpenAI API with the given prompt. Returns the response text.
 
-        If there was an error calling the API, logs the error and returns an empty
-        string. Otherwise, returns the response string with leading and trailing
-        whitespace removed.
+        If the request is successful, returns the response string with leading and
+        trailing whitespace removed. If there was an error calling the API, prints the
+        error and returns an empty string.
 
-        Logs the interaction per item id (user prompt and assistant result) and returns
-        the result. The log can be obtained from the `log` attribute.
+        Logs the interaction per item id (both the user prompt and assistant result)
+        on both successful and failed API calls. The log can be obtained from the `log`
+        property.
         """
         try:
             self._request_counter += 1
@@ -202,7 +203,7 @@ Text:
 
 Causal relationships:"""
 
-    response = client.call_openai_api(item_id, prompt)
+    response = client.run(item_id, prompt)
     response = remove_prefix(response, "Causal relationships:")
     return parse_graph(response)
 
@@ -264,7 +265,7 @@ Each line must be only "node1 -> node2" without any additional text or formattin
 
 Combined graph:"""
 
-    response = client.call_openai_api(item_id, prompt)
+    response = client.run(item_id, prompt)
     response = remove_prefix(response, "Combined graph:")
     return parse_graph(response)
 
@@ -283,7 +284,7 @@ Question:
 {question}
 
 Answer:"""
-    response = client.call_openai_api(item_id, prompt)
+    response = client.run(item_id, prompt)
     answer = remove_prefix(response, "Answer:")
 
     if not answer:
