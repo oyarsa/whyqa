@@ -21,7 +21,6 @@ import argparse
 import csv
 import json
 import re
-from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
@@ -29,9 +28,8 @@ from typing import Any
 def process_context(context: str) -> list[str]:
     """Split a context string into a list of individual search results.
 
-    This uses a regex pattern to identify and split the context string into separate
-    search results. Each result is expected to have the form:
-    '(... title ...) mon dd, yyyy [... content ...]'
+    This function is designed to handle multiple search results in a single string,
+    where each result starts with a title in parentheses.
 
     Args:
         context: A string containing multiple search results.
@@ -39,17 +37,12 @@ def process_context(context: str) -> list[str]:
     Returns:
         A list of individual search result strings.
     """
-    pattern = r"\([^)]+\)\s+[A-Za-z]{3}\s+\d{1,2},\s+\d{4}"
+    # Pattern: (Title) followed by content up to the next title or end of string
+    pattern = r"\([^)]+\).*?(?=\([^)]+\)|$)"
+    documents = re.findall(pattern, context, re.DOTALL)
+    return [doc.strip() for doc in documents]
 
-    def split_at_matches(text: str, matches: Iterable[re.Match[str]]) -> Iterable[str]:
-        last_end = 0
-        for match in matches:
-            yield text[last_end : match.start()].strip()
-            last_end = match.start()
-        yield text[last_end:].strip()
 
-    matches = re.finditer(pattern, context)
-    return [result for result in split_at_matches(context, matches) if result]
 def main(input_path: Path, output_file: Path) -> None:
     with input_path.open("r", newline="", encoding="utf-8") as csvfile:
         reader = csv.DictReader(csvfile)

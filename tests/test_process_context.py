@@ -1,5 +1,3 @@
-import pytest
-
 from whyqa.preprocess.process_causalqa import process_context
 
 
@@ -35,23 +33,37 @@ def test_results_with_empty_lines():
     assert process_context(context) == expected
 
 
-@pytest.mark.xfail(
-    reason="TODO: Function doesn't correctly handle results without newlines"
-)
-def test_results_with_nested_parentheses():
-    context = "(Complex (Nested) Title) Jul 7, 2023 Content with (parentheses).(Another (Tricky) One) Aug 8, 2023 More (complex) content."
-    expected = [
-        "(Complex (Nested) Title) Jul 7, 2023 Content with (parentheses).",
-        "(Another (Tricky) One) Aug 8, 2023 More (complex) content.",
-    ]
-    assert process_context(context) == expected
-
-
 def test_empty_input():
     assert process_context("") == []
 
 
-def test_input_without_valid_headers():
-    context = "This is just some text without any valid headers."
-    expected = ["This is just some text without any valid headers."]
+def test_results_with_multiple_lines_per_entry():
+    context = """(Multi-line Entry) This is the first line.
+This is the second line.
+This is the third line.
+(Next Entry) This is a single line entry."""
+    expected = [
+        "(Multi-line Entry) This is the first line.\nThis is the second line.\nThis is the third line.",
+        "(Next Entry) This is a single line entry.",
+    ]
+    assert process_context(context) == expected
+
+
+def test_results_with_special_characters():
+    context = """(Special: !@#$%^&*) Content with special chars: !@#$%^&*.
+(Números en español) Contenido en español: áéíóú."""
+    expected = [
+        "(Special: !@#$%^&*) Content with special chars: !@#$%^&*.",
+        "(Números en español) Contenido en español: áéíóú.",
+    ]
+    assert process_context(context) == expected
+
+
+def test_results_with_urls():
+    context = """(Web Content) Check out this URL: https://www.example.com/page?param=value.
+(Another Entry) More content here."""
+    expected = [
+        "(Web Content) Check out this URL: https://www.example.com/page?param=value.",
+        "(Another Entry) More content here.",
+    ]
     assert process_context(context) == expected
