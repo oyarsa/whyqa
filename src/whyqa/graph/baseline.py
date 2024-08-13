@@ -178,6 +178,17 @@ class GPTClient:
         return input_cost + output_cost
 
 
+def remove_prefix(string: str, prefix: str) -> str:
+    """Remove a prefix from a string if it exists.
+
+    If the string starts with the prefix, remove the prefix and any leading whitespace
+    after it. If the prefix is not found, return the original string unchanged.
+    """
+    if string.startswith(prefix):
+        return string[len(prefix) :].lstrip()
+    return string
+
+
 def build_causal_graph(client: GPTClient, item_id: str, text: str) -> nx.DiGraph:
     """Build a causal graph from the given text using the OpenAI API."""
     prompt = f"""Extract causal relationships from the following text and represent them as a list of (cause, effect) pairs.
@@ -192,36 +203,8 @@ Text:
 Causal relationships:"""
 
     response = client.call_openai_api(item_id, prompt)
+    response = remove_prefix(response, "Causal relationships:")
     return parse_graph(response)
-
-
-def remove_prefix(string: str, prefix: str) -> str:
-    """Remove a prefix from a string if it exists.
-
-    If the string starts with the prefix, remove the prefix and any leading whitespace
-    after it. If the prefix is not found, return the original string unchanged.
-    """
-    if string.startswith(prefix):
-        return string[len(prefix) :].lstrip()
-    return string
-
-
-def summarise_nodes(client: GPTClient, item_id: str, nodes: Sequence[str]) -> str:
-    """Summarise a set of similar nodes into a single description."""
-    prompt = f"""Summarise the following related events into a single, concise description:
-
-Events:
-{"\n".join(f"- {node}" for node in nodes)}
-
-Summary:"""
-    response = client.call_openai_api(item_id, prompt)
-    summary = remove_prefix(response, "Summary:")
-
-    if not summary:
-        print(f"WARNING: Failed to summarise nodes: {nodes}", file=sys.stderr)
-        summary = " / ".join(nodes)
-
-    return summary
 
 
 def parse_graph(graph_str: str) -> nx.DiGraph:
@@ -346,7 +329,7 @@ def main(
     seed: int,
     max_samples: int | None,
 ) -> None:
-    """Process the dataset and evaluate answers."""
+    # Suppress useless warnings from transformers
     warnings.filterwarnings(
         "ignore", category=FutureWarning, module="transformers.tokenization_utils_base"
     )
@@ -361,6 +344,7 @@ def main(
     dataset = load_dataset(dataset_path)
     senttf_model = SentenceTransformer(senttf_model_name)
 
+    # Save the configuration for reproducibility
     config = {
         "dataset_path": str(dataset_path),
         "dataset_sha256": hashlib.sha256(dataset_path.read_bytes()).hexdigest(),
@@ -368,6 +352,9 @@ def main(
         "gpt_model": gpt_model_name,
         "run_name": run_name,
         "timestamp": datetime.now().isoformat(),
+        "max_texts": max_texts,
+        "seed": seed,
+        "max_samples": max_samples,
     }
 
     dataset = dataset[:max_samples]
@@ -424,7 +411,7 @@ def main(
 
     log_serialisable = {
         item_id: [asdict(interaction) for interaction in interactions]
-        for item_id, interactions in client._log.items()
+        for item_id, interactions in client.log.items()
     }
     (output_dir / "log.json").write_text(json.dumps(log_serialisable, indent=2))
 
