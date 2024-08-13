@@ -1,14 +1,24 @@
-"""Process JSON files by splitting context strings into lists and adding a count.
+# pyright: basic
+"""Transform CSV files to JSON by splitting context strings into lists.
 
-This script takes a JSON file path as a command-line argument, processes the file
-by splitting the 'context' field of each object into a list of strings based on
-a specific pattern, adds a 'num_contexts' field with the count of contexts, and
-saves the result to a new JSON file with 'processed' appended to the filename.
+This script takes a CSV file path as a commandline argument, processes the file
+by splitting the 'context' field of each row into a list of strings and saves the result
+to a new JSON file.
+
+The 'context' field in the CSV file contains multiple search results in a single string.
+This is broken down into individual search results using a regex pattern.
+
+The CSV file is expected to have the following columns:
+- id: An integer ID for each row.
+- question: A string containing a search query.
+- context: A string containing multiple search results.
+- answer: A string containing the correct answer.
 
 The dataset has to be manually downloaded from https://zenodo.org/records/7186761
 """
 
 import argparse
+import csv
 import json
 import re
 from collections.abc import Iterable
@@ -40,31 +50,30 @@ def process_context(context: str) -> list[str]:
 
     matches = re.finditer(pattern, context)
     return [result for result in split_at_matches(context, matches) if result]
+def main(input_path: Path, output_file: Path) -> None:
+    with input_path.open("r", newline="", encoding="utf-8") as csvfile:
+        reader = csv.DictReader(csvfile)
+        output: list[dict[str, Any]] = [
+            {
+                "id": int(row["id"]),
+                "query": row["question"],
+                "texts": process_context(row["context"]),
+                "answer": row["answer"],
+            }
+            for row in reader
+        ]
 
-
-def main(input_path: Path) -> None:
-    data: list[dict[str, Any]] = json.loads(input_path.read_text())
-    output = [
-        {
-            "id": int(item["id"]),
-            "query": item["question"],
-            "texts": process_context(item["context"]),
-            "answer": item["answer"],
-        }
-        for item in data
-    ]
-
-    output_path = input_path.with_stem(f"{input_path.stem}_processed")
-    output_path.write_text(json.dumps(output, indent=2))
-
-    print(f"Processed data saved to: {output_path}")
+    output_file.write_text(json.dumps(output, indent=2))
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Process JSON files by splitting context strings."
+        description="Process CSV files by splitting context strings."
     )
-    parser.add_argument("input_file", type=Path, help="Path to the input JSON file")
+    parser.add_argument("input_file", type=Path, help="Path to the input CSV file")
+    parser.add_argument(
+        "output_file", type=Path, help="Path to the transformed JSON file"
+    )
     args = parser.parse_args()
 
-    main(args.input_file)
+    main(args.input_file, args.output_file)
