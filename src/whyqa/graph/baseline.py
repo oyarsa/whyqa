@@ -45,14 +45,13 @@ import os
 import sys
 import warnings
 from collections import defaultdict
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Collection, Iterable, Mapping, Sequence
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 import dotenv
-import networkx as nx
 import openai
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -190,17 +189,46 @@ def remove_prefix(string: str, prefix: str) -> str:
     return string
 
 
-def parse_graph(graph_str: str) -> nx.MultiDiGraph:
-    """Parse a string of causal relationships into a MultiDiGraph.
+class Edge(NamedTuple):
+    source: str
+    relation: str
+    destination: str
+
+
+class Graph:
+    """A directed graph with nodes and labelled edges.
+
+    There's only one edge per unique relationship. Note that there may be multiple
+    edges with the same nodes but different relation labels.
+    """
+
+    edges: Collection[Edge]
+    nodes: Collection[str]
+
+    def __init__(self, edges: Iterable[tuple[str, str, str]]) -> None:
+        """Constructs a graph with the given edges. Nodes are derived from the edges.
+
+        Args:
+            edges: A sequence of tuples in the format (source, relation, destination).
+        """
+        self.edges = tuple(Edge(src, rel, dst) for src, rel, dst in edges)
+        nodes: list[str] = []
+        for src, _, dst in self.edges:
+            nodes.extend((src, dst))
+        self.nodes = frozenset(nodes)
+
+
+def parse_graph(graph_str: str) -> Graph:
+    """Parse a sequence of causal relationships into a `Graph`.
 
     Args:
         graph_str: A string containing causal relationships, one per line.
             Each line should be in the format "cause -> relation -> effect".
-            Empty lines and lines without "->" are ignored.
+            Empty lines, lines without "->" or with less than 3 components are ignored.
             Leading and trailing whitespace in cause and effect is stripped.
 
     Returns:
-        A MultiDiGraph representing the causal relationships.
+        A `Graph` representing the causal relationships.
 
     Example input:
         "
@@ -212,13 +240,11 @@ def parse_graph(graph_str: str) -> nx.MultiDiGraph:
 
     Note:
         - The function is case-sensitive; "Event A" and "event A" are treated as
-          different nodes.
-        - If the same causal relationship appears multiple times in the input,
-          including the same relation label, multiple edges will be created in the graph.
-        - The function does not validate the semantic correctness of the relationships;
-          it only parses the syntactic structure.
+          different nodes. Similarly for relation labels.
+        - The graph only contains one edge per unique causal relationship. Note that
+          there may be multiple edges with the same nodes but different relation labels.
     """
-    graph = nx.MultiDiGraph()
+    edges: list[tuple[str, str, str]] = []
     for line in graph_str.split("\n"):
         if "->" in line:
             parts = line.split("->", maxsplit=2)
@@ -226,8 +252,8 @@ def parse_graph(graph_str: str) -> nx.MultiDiGraph:
                 continue
 
             cause, relation, effect = map(str.strip, parts)
-            graph.add_edge(cause, effect, relation=relation)
-    return graph
+            edges.append((cause, relation, effect))
+    return Graph(edges)
 
 
 GRAPH_FORMAT_PROMPT = """\
@@ -240,7 +266,7 @@ The graph should be represented using the following format:
 """
 
 
-def build_causal_graph(client: GPTClient, item_id: str, text: str) -> nx.MultiDiGraph:
+def build_causal_graph(client: GPTClient, item_id: str, text: str) -> Graph:
     """Build a causal graph from the given text using the OpenAI API."""
     prompt = f"""Extract causal relationships from the following text.
 {GRAPH_FORMAT_PROMPT}
@@ -255,19 +281,14 @@ Causal relationships:"""
     return parse_graph(response)
 
 
-def combine_graphs(
-    client: GPTClient, item_id: str, graphs: Iterable[nx.MultiDiGraph]
-) -> nx.MultiDiGraph:
+def combine_graphs(client: GPTClient, item_id: str, graphs: Iterable[Graph]) -> Graph:
     """Combine multiple graphs into a single graph using the LLM."""
     if not graphs:
         raise ValueError("At least one graph must be provided.")
 
     graph_representations: list[str] = []
     for i, graph in enumerate(graphs, 1):
-        edges = (
-            f"{src} -> {data["relation"]} -> {dst}"
-            for src, dst, data in graph.edges(data=True)
-        )
+        edges = (f"{src} -> {rel} -> {dst}" for src, rel, dst in graph.edges)
         graph_representations.append(f"Graph {i}:\n" + "\n".join(edges))
 
     prompt = f"""Given the following causal graphs, combine them into a single coherent graph.
@@ -285,12 +306,10 @@ Combined graph:"""
 
 
 def answer_question(
-    client: GPTClient, item_id: str, graph: nx.MultiDiGraph, question: str
+    client: GPTClient, item_id: str, graph: Graph, question: str
 ) -> str:
     """Generate an answer to the question using the causal graph."""
-    graph_repr = "\n".join(
-        f"{src} {data["relation"]} {dst}" for src, dst, data in graph.edges(data=True)
-    )
+    graph_repr = "\n".join(f"{src} {rel} {dst}" for src, rel, dst in graph.edges)
     prompt = f"""Using the following causal graph, answer the question:
 
 Graph:
@@ -313,17 +332,17 @@ Answer:"""
     return answer
 
 
-def print_graphs(graphs: Sequence[nx.MultiDiGraph]) -> None:
+def print_graphs(graphs: Sequence[Graph]) -> None:
     """Print the number of graphs, nodes in each graph and edges in each graph."""
     print(f"  Number of graphs: {len(graphs)}")
     for i, graph in enumerate(graphs, 1):
         print(f"    Graph {i}:")
-        print(f"      Nodes: {len(graph.nodes())}")  # type: ignore
-        for node in graph.nodes():
+        print(f"      Nodes: {len(graph.nodes)}")
+        for node in graph.nodes:
             print(f"        {node}")
-        print(f"      Edges: {graph.number_of_edges()}")
-        for src, dst, data in graph.edges(data=True):
-            print(f"        {src} -> {data["relation"]} -> {dst}")
+        print(f"      Edges: {len(graph.edges)}")
+        for src, rel, dst in graph.edges:
+            print(f"        {src} -> {rel} -> {dst}")
         print()
     print()
 

@@ -14,7 +14,6 @@ dependencies = [
     "typer<1.0,>=0.9",
     "pandas-stubs>=2.2.2.240603",
     "scipy>=1.14.0",
-    "networkx>=3.3",
     "sentence-transformers>=3.0.1",
     "pytest>=8.3.2",
     "python-dotenv>=1.0.1",
