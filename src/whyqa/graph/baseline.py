@@ -190,13 +190,60 @@ def remove_prefix(string: str, prefix: str) -> str:
     return string
 
 
-def build_causal_graph(client: GPTClient, item_id: str, text: str) -> nx.DiGraph:
+def parse_graph(graph_str: str) -> nx.MultiDiGraph:
+    """Parse a string of causal relationships into a MultiDiGraph.
+
+    Args:
+        graph_str: A string containing causal relationships, one per line.
+            Each line should be in the format "cause -> relation -> effect".
+            Empty lines and lines without "->" are ignored.
+            Leading and trailing whitespace in cause and effect is stripped.
+
+    Returns:
+        A MultiDiGraph representing the causal relationships.
+
+    Example input:
+        "
+        event A -> relation 1 -> consequence B
+        factor X -> relation 2 -> outcome Y
+        cause 1 -> relation 3 -> effect 1
+        cause 1 -> relation 4 -> effect 2
+        "
+
+    Note:
+        - The function is case-sensitive; "Event A" and "event A" are treated as
+          different nodes.
+        - If the same causal relationship appears multiple times in the input,
+          including the same relation label, multiple edges will be created in the graph.
+        - The function does not validate the semantic correctness of the relationships;
+          it only parses the syntactic structure.
+    """
+    graph = nx.MultiDiGraph()
+    for line in graph_str.split("\n"):
+        if "->" in line:
+            parts = line.split("->", maxsplit=2)
+            if len(parts) != 3:
+                continue
+
+            cause, relation, effect = map(str.strip, parts)
+            graph.add_edge(cause, effect, relation=relation)
+    return graph
+
+
+GRAPH_FORMAT_PROMPT = """\
+The graph should be represented using the following format:
+- Represent the relations as a sequence of (cause, relation, effect) triplets.
+- Use the format 'cause -> relation -> effect' for each relationship, with one relationship per line.
+- If there are no clear causal relationships, return nothing.
+- Each line must be only "cause -> relation -> effect" without any additional text or formatting.
+- Only proper nouns should be capitalised; anything else should be lowercase.
+"""
+
+
+def build_causal_graph(client: GPTClient, item_id: str, text: str) -> nx.MultiDiGraph:
     """Build a causal graph from the given text using the OpenAI API."""
-    prompt = f"""Extract causal relationships from the following text and represent them as a list of (cause, effect) pairs.
-Use the format 'cause -> effect' for each relationship, with one relationship per line.
-If there are no clear causal relationships, return nothing.
-Each line must be only "node1 -> node2" without any additional text or formatting.
-Only proper nouns should be capitalised; anything else should be lowercase.
+    prompt = f"""Extract causal relationships from the following text.
+{GRAPH_FORMAT_PROMPT}
 
 Text:
 {text}
@@ -208,58 +255,25 @@ Causal relationships:"""
     return parse_graph(response)
 
 
-def parse_graph(graph_str: str) -> nx.DiGraph:
-    """Parse a string of causal relationships into a DiGraph.
-
-    Args:
-        graph_str: A string containing causal relationships, one per line.
-            Each line should be in the format "cause -> effect".
-            Empty lines and lines without "->" are ignored.
-            Leading and trailing whitespace in cause and effect is stripped.
-
-    Returns:
-        A NetworkX DiGraph representing the causal relationships.
-
-    Example input:
-        "
-        event A -> consequence B
-        factor X -> outcome Y
-        cause 1 -> effect 1
-        cause 1 -> effect 2
-        "
-
-    Note:
-        - The function is case-sensitive; "Event A" and "event A" are treated as
-          different nodes.
-        - If the same causal relationship appears multiple times in the input,
-          only one edge will be created in the graph.
-        - The function does not validate the semantic correctness of the relationships;
-          it only parses the syntactic structure.
-    """
-    graph = nx.DiGraph()
-    for line in graph_str.split("\n"):
-        if "->" in line:
-            cause, effect = map(str.strip, line.split("->"))
-            graph.add_edge(cause, effect)
-    return graph
-
-
 def combine_graphs(
-    client: GPTClient, item_id: str, graphs: Iterable[nx.DiGraph]
-) -> nx.DiGraph:
+    client: GPTClient, item_id: str, graphs: Iterable[nx.MultiDiGraph]
+) -> nx.MultiDiGraph:
     """Combine multiple graphs into a single graph using the LLM."""
     if not graphs:
         raise ValueError("At least one graph must be provided.")
 
     graph_representations: list[str] = []
     for i, graph in enumerate(graphs, 1):
-        edges = (f"{src} -> {dst}" for src, dst in graph.edges())
+        edges = (
+            f"{src} -> {data["relation"]} -> {dst}"
+            for src, dst, data in graph.edges(data=True)
+        )
         graph_representations.append(f"Graph {i}:\n" + "\n".join(edges))
 
     prompt = f"""Given the following causal graphs, combine them into a single coherent graph.
-Merge similar nodes and remove redundancies. Present the result as a list of causal \
-relationships in the format 'cause -> effect', one per line.
-Each line must be only "node1 -> node2" without any additional text or formatting.
+Merge similar nodes, remove redundancies and merge edges with the same nodes and
+similar relations.
+{GRAPH_FORMAT_PROMPT}
 
 {"\n\n".join(graph_representations)}
 
@@ -271,10 +285,12 @@ Combined graph:"""
 
 
 def answer_question(
-    client: GPTClient, item_id: str, graph: nx.DiGraph, question: str
+    client: GPTClient, item_id: str, graph: nx.MultiDiGraph, question: str
 ) -> str:
     """Generate an answer to the question using the causal graph."""
-    graph_repr = "\n".join([f"{edge[0]} -> {edge[1]}" for edge in graph.edges()])
+    graph_repr = "\n".join(
+        f"{src} {data["relation"]} {dst}" for src, dst, data in graph.edges(data=True)
+    )
     prompt = f"""Using the following causal graph, answer the question:
 
 Graph:
@@ -297,14 +313,7 @@ Answer:"""
     return answer
 
 
-def calculate_similarity(text1: str, text2: str, model: SentenceTransformer) -> float:
-    """Calculate the cosine similarity between two texts using sentence embeddings."""
-    embeddings = model.encode([text1, text2])
-    similarity = float(cosine_similarity([embeddings[0]], [embeddings[1]])[0][0])
-    return (similarity + 1) / 2  # Normalise to [0, 1]
-
-
-def report_graphs(graphs: Sequence[nx.DiGraph]) -> None:
+def print_graphs(graphs: Sequence[nx.MultiDiGraph]) -> None:
     """Print the number of graphs, nodes in each graph and edges in each graph."""
     print(f"  Number of graphs: {len(graphs)}")
     for i, graph in enumerate(graphs, 1):
@@ -312,11 +321,18 @@ def report_graphs(graphs: Sequence[nx.DiGraph]) -> None:
         print(f"      Nodes: {len(graph.nodes())}")  # type: ignore
         for node in graph.nodes():
             print(f"        {node}")
-        print(f"      Edges: {len(graph.edges())}")
-        for edge in graph.edges():
-            print(f"        {edge[0]} -> {edge[1]}")
+        print(f"      Edges: {graph.number_of_edges()}")
+        for src, dst, data in graph.edges(data=True):
+            print(f"        {src} -> {data["relation"]} -> {dst}")
         print()
     print()
+
+
+def calculate_similarity(text1: str, text2: str, model: SentenceTransformer) -> float:
+    """Calculate the cosine similarity between two texts using sentence embeddings."""
+    embeddings = model.encode([text1, text2])
+    similarity = float(cosine_similarity([embeddings[0]], [embeddings[1]])[0][0])
+    return (similarity + 1) / 2  # Normalise to [0, 1]
 
 
 def main(
@@ -367,11 +383,11 @@ def main(
         texts = item.texts[:max_texts]
         print(f"  Building causal graphs. ({len(texts)} texts)")
         graphs = [build_causal_graph(client, item.id, text) for text in texts]
-        report_graphs(graphs)
+        print_graphs(graphs)
 
         print("  Combining causal graphs.")
         combined_graph = combine_graphs(client, item.id, graphs)
-        report_graphs([combined_graph])
+        print_graphs([combined_graph])
 
         print("  Answering question.")
         predicted_answer = answer_question(client, item.id, combined_graph, item.query)
