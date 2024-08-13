@@ -332,18 +332,25 @@ Answer:"""
     return answer
 
 
-def print_graphs(graphs: Sequence[Graph]) -> None:
+def print_graph(graph: Graph, indent_size: int = 0) -> None:
+    """Print the nodes and edges of a graph."""
+    indent = " " * indent_size
+    print(f"{indent}Nodes: {len(graph.nodes)}")
+    for node in graph.nodes:
+        print(f"{indent}  {node}")
+    print(f"{indent}Edges: {len(graph.edges)}")
+    for src, rel, dst in graph.edges:
+        print(f"{indent}  {src} -> {rel} -> {dst}")
+    print()
+
+
+def print_graphs(graphs: Sequence[Graph], texts: Sequence[str]) -> None:
     """Print the number of graphs, nodes in each graph and edges in each graph."""
     print(f"  Number of graphs: {len(graphs)}")
-    for i, graph in enumerate(graphs, 1):
+    for i, (graph, text) in enumerate(zip(graphs, texts), 1):
         print(f"    Graph {i}:")
-        print(f"      Nodes: {len(graph.nodes)}")
-        for node in graph.nodes:
-            print(f"        {node}")
-        print(f"      Edges: {len(graph.edges)}")
-        for src, rel, dst in graph.edges:
-            print(f"        {src} -> {rel} -> {dst}")
-        print()
+        print(f"      Text: {text}")
+        print_graph(graph, 6)
     print()
 
 
@@ -402,11 +409,11 @@ def main(
         texts = item.texts[:max_texts]
         print(f"  Building causal graphs. ({len(texts)} texts)")
         graphs = [build_causal_graph(client, item.id, text) for text in texts]
-        print_graphs(graphs)
+        print_graphs(graphs, texts)
 
         print("  Combining causal graphs.")
         combined_graph = combine_graphs(client, item.id, graphs)
-        print_graphs([combined_graph])
+        print_graph(combined_graph)
 
         print("  Answering question.")
         predicted_answer = answer_question(client, item.id, combined_graph, item.query)
