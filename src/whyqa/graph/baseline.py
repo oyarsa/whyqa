@@ -205,7 +205,7 @@ class Graph:
     edges: Collection[Edge]
     nodes: Collection[str]
 
-    def __init__(self, edges: Iterable[tuple[str, str, str]]) -> None:
+    def __init__(self, edges: Iterable[tuple[str, str, str] | Edge]) -> None:
         """Constructs a graph with the given edges. Nodes are derived from the edges.
 
         Args:
@@ -361,6 +361,94 @@ def calculate_similarity(text1: str, text2: str, model: SentenceTransformer) -> 
     return (similarity + 1) / 2  # Normalise to [0, 1]
 
 
+def parse_mapping(mapping_str: str) -> dict[str, str]:
+    """Parse a mapping of "old -> new" values from a string, one per line."""
+    mapping: dict[str, str] = {}
+    for line in mapping_str.splitlines():
+        if "->" in line:
+            parts = line.split("->", maxsplit=1)
+            if len(parts) != 2:
+                continue
+
+            old, new = map(str.strip, parts)
+            mapping[old] = new
+    return mapping
+
+
+def print_mapping(mapping: dict[str, str]) -> None:
+    """Print a mapping of old values to new values. Reverses the mapping for clarity."""
+    reverse_mapping: dict[str, list[str]] = defaultdict(list)
+    for old, new in mapping.items():
+        reverse_mapping[new].append(old)
+
+    for new, olds in reverse_mapping.items():
+        print(f"    {"/ ".join(olds)} -> {new}")
+    print()
+
+
+def merge_relations(
+    client: GPTClient, item_id: str, graphs: Sequence[Graph]
+) -> Sequence[Graph]:
+    """Merge nodes with similar meaning in the graphs."""
+    relations = {relation for graph in graphs for _, relation, _ in graph.edges}
+    prompt = f"""Given the following list of relations, one per line, merge relations with \
+similar meaning. Respond with the list of combined relations. The response format should \
+be 'old relation -> new relation' for each relation that has been merged. Only include
+relations that have been merged.
+
+Relations:
+{"\n".join(relations)}
+
+Merged relations:"""
+    response = client.run(item_id, prompt)
+    response = remove_prefix(response, "Merged relations:")
+    relation_mapping = parse_mapping(response)
+    print_mapping(relation_mapping)
+
+    merged_graphs: list[Graph] = []
+
+    for graph in graphs:
+        new_edges: list[Edge] = []
+        for src, relation, dst in graph.edges:
+            new_relation = relation_mapping.get(relation, relation)
+            new_edges.append(Edge(src, new_relation, dst))
+        merged_graphs.append(Graph(new_edges))
+
+    return merged_graphs
+
+
+def merge_nodes(
+    client: GPTClient, item_id: str, graphs: Sequence[Graph]
+) -> Sequence[Graph]:
+    """Merge nodes with similar meaning in the graphs."""
+    nodes = {node for graph in graphs for node in graph.nodes}
+    prompt = f"""Given the following list of nodes, one per line, merge nodes with \
+similar meaning. Respond with the list of combined nodes. The response format should \
+be 'old node -> new node' for each node that has been merged. Only include nodes
+that have been merged.
+
+Nodes:
+{"\n".join(nodes)}
+
+Merged nodes:"""
+    response = client.run(item_id, prompt)
+    response = remove_prefix(response, "Merged nodes:")
+    node_mapping = parse_mapping(response)
+    print_mapping(node_mapping)
+
+    merged_graphs: list[Graph] = []
+
+    for graph in graphs:
+        new_edges: list[Edge] = []
+        for src, rel, dst in graph.edges:
+            new_src = node_mapping.get(src, src)
+            new_dst = node_mapping.get(dst, dst)
+            new_edges.append(Edge(new_src, rel, new_dst))
+        merged_graphs.append(Graph(new_edges))
+
+    return merged_graphs
+
+
 def main(
     dataset_path: Path,
     api_key: str | None,
@@ -410,6 +498,12 @@ def main(
         print(f"  Building causal graphs. ({len(texts)} texts)")
         graphs = [build_causal_graph(client, item.id, text) for text in texts]
         print_graphs(graphs, texts)
+
+        print("  Merging similar nodes.")
+        graphs = merge_nodes(client, item.id, graphs)
+
+        print("  Merging similar relations.")
+        graphs = merge_relations(client, item.id, graphs)
 
         print("  Combining causal graphs.")
         combined_graph = combine_graphs(client, item.id, graphs)
