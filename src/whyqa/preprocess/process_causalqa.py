@@ -38,6 +38,9 @@ def process_context(context: str) -> list[str]:
         A list of individual search result strings.
     """
     # Pattern: (Title) followed by content up to the next title or end of string
+    # This isn't perfect (for example, nested parens screw this up), but it's the best
+    # that I could do with the unstructed data the datasets have. Blame the CausalQA
+    # dataset curators that decided to do this.
     pattern = r"\([^)]+\).*?(?=\([^)]+\)|$)"
     documents = re.findall(pattern, context, re.DOTALL)
     return [doc.strip() for doc in documents]
