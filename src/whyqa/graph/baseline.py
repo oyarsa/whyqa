@@ -331,7 +331,8 @@ def answer_question(
 ) -> str:
     """Generate an answer to the question using the causal graph."""
     graph_repr = "\n".join(f"{src} {rel} {dst}" for src, rel, dst in graph.edges)
-    prompt = f"""Using the following causal graph, answer the question:
+    prompt = f"""Using the following causal graph, answer the question. Be succint in \
+your response.
 
 Graph:
 {graph_repr}
