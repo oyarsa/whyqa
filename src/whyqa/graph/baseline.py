@@ -474,13 +474,16 @@ def main(
     max_texts: int | None,
     seed: int,
     max_samples: int | None,
+    log_level: str,
 ) -> None:
     # Set up logger
+    if log_level.upper() not in ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"):
+        raise ValueError(f"Invalid log level: {log_level}")
     handler = logging.StreamHandler(sys.stdout)
     formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
     handler.setFormatter(formatter)
     log.addHandler(handler)
-    log.setLevel(logging.DEBUG)
+    log.setLevel(log_level.upper())
 
     # Suppress useless warnings from transformers
     warnings.filterwarnings(
@@ -627,6 +630,11 @@ if __name__ == "__main__":
     parser.add_argument(
         "--max-samples", "-n", type=int, default=None, help="Maximum number of samples"
     )
+    parser.add_argument(
+        "--log-level",
+        default="info",
+        help="Logging level (default: %(default)s)",
+    )
     args = parser.parse_args()
 
     main(
@@ -639,4 +647,5 @@ if __name__ == "__main__":
         args.max_texts,
         args.seed,
         args.max_samples,
+        args.log_level,
     )
