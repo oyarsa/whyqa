@@ -357,7 +357,7 @@ def format_graph(graph: Graph, indent_size: int = 0) -> str:
     lines.extend(f"{indent}  {node}" for node in graph.nodes)
     lines.append(f"{indent}Edges: {len(graph.edges)}")
     lines.extend(f"{indent}  {src} -> {rel} -> {dst}" for src, rel, dst in graph.edges)
-    return "\n".join(lines) + "\n"
+    return "\n" + "\n".join(lines) + "\n"
 
 
 def log_graphs(graphs: Sequence[Graph], texts: Sequence[str]) -> None:
@@ -553,7 +553,7 @@ def main(
         )
         output_items.append(output_item)
 
-        log.info(f"\nQuery: {item.query}")
+        log.info(f"Query: {item.query}")
         log.info(f"Predicted Answer: {predicted_answer}")
         log.info(f"Expected Answer: {item.answer}")
         log.info(f"Similarity Score: {similarity:.4f}\n")
