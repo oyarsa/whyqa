@@ -103,7 +103,6 @@ class GPTClient:
         self._client = openai.OpenAI(api_key=api_key)
         self._model = model
         self._log: dict[str, list[APIInteraction]] = defaultdict(list)
-        self._request_counter = 0
         self._seed = seed
         self._input_tokens = 0
         self._output_tokens = 0
@@ -120,9 +119,6 @@ class GPTClient:
         property.
         """
         try:
-            self._request_counter += 1
-            log.debug(f"Calling OpenAI API ({self._request_counter})")
-
             self._log[item_id].append(APIInteraction(role="user", data=prompt))
             response = self._client.chat.completions.create(
                 model=self._model,
