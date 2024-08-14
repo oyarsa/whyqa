@@ -13,7 +13,7 @@ This loads a dataset from a JSON file, and for each item in the dataset:
 - Evaluates the generated answer using cosine similarity with the expected answer using
 sentence embeddings from SentenceTransformer
 
-The dataset is a JSON file containg a list of items, each with the following keys:
+The dataset is a JSON file containing a list of items, each with the following keys:
 - query (str): The question to answer.
 - texts (list[str]): A list of texts to extract causal relationships from.
 - answer (str): The expected answer to the question.
@@ -41,6 +41,7 @@ import argparse
 import copy
 import hashlib
 import json
+import logging
 import os
 import sys
 import warnings
@@ -55,6 +56,8 @@ import dotenv
 import openai
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
+
+log = logging.getLogger(__file__)
 
 
 @dataclass
@@ -109,7 +112,7 @@ class GPTClient:
         """Call the OpenAI API with the given prompt. Returns the response text.
 
         If the request is successful, returns the response string with leading and
-        trailing whitespace removed. If there was an error calling the API, prints the
+        trailing whitespace removed. If there was an error calling the API, logs the
         error and returns an empty string.
 
         Logs the interaction per item id (both the user prompt and assistant result)
@@ -118,7 +121,7 @@ class GPTClient:
         """
         try:
             self._request_counter += 1
-            print(f"\t\t\tCalling OpenAI API ({self._request_counter})")
+            log.debug(f"Calling OpenAI API ({self._request_counter})")
 
             self._log[item_id].append(APIInteraction(role="user", data=prompt))
             response = self._client.chat.completions.create(
@@ -135,7 +138,7 @@ class GPTClient:
                 self._input_tokens += response.usage.prompt_tokens
                 self._output_tokens += response.usage.completion_tokens
         except (openai.OpenAIError, IndexError) as e:
-            print(f"Error calling OpenAI API: {e}")
+            log.exception("Error calling OpenAI API")
             self._log[item_id].append(
                 APIInteraction(role="assistant", data=f"Error: {e}")
             )
@@ -165,10 +168,7 @@ class GPTClient:
         }
 
         if self._model not in model_pricing:
-            print(
-                f"WARNING: Pricing for model {self._model} is not available",
-                file=sys.stderr,
-            )
+            log.warning(f"Pricing for model {self._model} is not available")
             return float("nan")
 
         input_, output = model_pricing[self._model]
@@ -323,35 +323,31 @@ Answer:"""
     answer = remove_prefix(response, "Answer:")
 
     if not answer:
-        print(
-            f"WARNING: Failed to generate answer for question: {question}",
-            file=sys.stderr,
-        )
+        log.warning(f"Failed to generate answer for question: {question}")
         answer = "Unable to generate answer"
 
     return answer
 
 
-def print_graph(graph: Graph, indent_size: int = 0) -> None:
-    """Print the nodes and edges of a graph."""
+def format_graph(graph: Graph, indent_size: int = 0) -> str:
+    """Format the nodes and edges of a graph as a string."""
     indent = " " * indent_size
-    print(f"{indent}Nodes: {len(graph.nodes)}")
-    for node in graph.nodes:
-        print(f"{indent}  {node}")
-    print(f"{indent}Edges: {len(graph.edges)}")
-    for src, rel, dst in graph.edges:
-        print(f"{indent}  {src} -> {rel} -> {dst}")
-    print()
+    lines = [f"\n{indent}Nodes: {len(graph.nodes)}"]
+    lines.extend(f"{indent}  {node}" for node in graph.nodes)
+    lines.append(f"{indent}Edges: {len(graph.edges)}")
+    lines.extend(f"{indent}  {src} -> {rel} -> {dst}" for src, rel, dst in graph.edges)
+    return "\n".join(lines)
 
 
-def print_graphs(graphs: Sequence[Graph], texts: Sequence[str]) -> None:
-    """Print the number of graphs, nodes in each graph and edges in each graph."""
-    print(f"  Number of graphs: {len(graphs)}")
+def log_graphs(graphs: Sequence[Graph], texts: Sequence[str]) -> None:
+    # sourcery skip: merge-list-appends-into-extend
+    """Log the number of graphs, nodes in each graph, and edges in each graph."""
+    lines = [f"\n  Number of graphs: {len(graphs)}"]
     for i, (graph, text) in enumerate(zip(graphs, texts), 1):
-        print(f"    Graph {i}:")
-        print(f"      Text: {text}")
-        print_graph(graph, 6)
-    print()
+        lines.append(f"    Graph {i}:")
+        lines.append(f"      Text: {text}")
+        lines.append(format_graph(graph, 6))
+    log.debug("\n".join(lines))
 
 
 def calculate_similarity(text1: str, text2: str, model: SentenceTransformer) -> float:
@@ -375,15 +371,16 @@ def parse_mapping(mapping_str: str) -> dict[str, str]:
     return mapping
 
 
-def print_mapping(mapping: dict[str, str]) -> None:
-    """Print a mapping of old values to new values. Reverses the mapping for clarity."""
+def log_mapping(mapping: dict[str, str]) -> None:
+    """Log a mapping of old values to new values. Reverses the mapping for clarity."""
     reverse_mapping: dict[str, list[str]] = defaultdict(list)
     for old, new in mapping.items():
         reverse_mapping[new].append(old)
 
-    for new, olds in reverse_mapping.items():
-        print(f"    {"/ ".join(olds)} -> {new}")
-    print()
+    lines = [
+        f"\n    {"/ ".join(olds)} -> {new}" for new, olds in reverse_mapping.items()
+    ]
+    log.debug("\n".join(lines))
 
 
 def merge_relations(
@@ -403,7 +400,7 @@ Merged relations:"""
     response = client.run(item_id, prompt)
     response = remove_prefix(response, "Merged relations:")
     relation_mapping = parse_mapping(response)
-    print_mapping(relation_mapping)
+    log_mapping(relation_mapping)
 
     merged_graphs: list[Graph] = []
 
@@ -434,7 +431,7 @@ Merged nodes:"""
     response = client.run(item_id, prompt)
     response = remove_prefix(response, "Merged nodes:")
     node_mapping = parse_mapping(response)
-    print_mapping(node_mapping)
+    log_mapping(node_mapping)
 
     merged_graphs: list[Graph] = []
 
@@ -460,6 +457,13 @@ def main(
     seed: int,
     max_samples: int | None,
 ) -> None:
+    # Set up logger
+    handler = logging.StreamHandler(sys.stdout)
+    formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+    handler.setFormatter(formatter)
+    log.addHandler(handler)
+    log.setLevel(logging.DEBUG)
+
     # Suppress useless warnings from transformers
     warnings.filterwarnings(
         "ignore", category=FutureWarning, module="transformers.tokenization_utils_base"
@@ -492,27 +496,27 @@ def main(
     output_items: list[OutputItem] = []
 
     for i, item in enumerate(dataset, 1):
-        print(f"Item {i}/{len(dataset)}:")
+        log.info(f"Item {i}/{len(dataset)}:")
 
         texts = item.texts[:max_texts]
-        print(f"  Building causal graphs. ({len(texts)} texts)")
+        log.info(f"  Building causal graphs. ({len(texts)} texts)")
         graphs = [build_causal_graph(client, item.id, text) for text in texts]
-        print_graphs(graphs, texts)
+        log_graphs(graphs, texts)
 
-        print("  Merging similar nodes.")
+        log.info("  Merging similar nodes.")
         graphs = merge_nodes(client, item.id, graphs)
 
-        print("  Merging similar relations.")
+        log.info("  Merging similar relations.")
         graphs = merge_relations(client, item.id, graphs)
 
-        print("  Combining causal graphs.")
+        log.info("  Combining causal graphs.")
         combined_graph = combine_graphs(client, item.id, graphs)
-        print_graph(combined_graph)
+        log.debug(format_graph(combined_graph))
 
-        print("  Answering question.")
+        log.info("  Answering question.")
         predicted_answer = answer_question(client, item.id, combined_graph, item.query)
 
-        print("  Calculating similarity score.")
+        log.info("  Calculating similarity score.")
         similarity = calculate_similarity(predicted_answer, item.answer, senttf_model)
 
         output_item = OutputItem(
@@ -525,18 +529,18 @@ def main(
         )
         output_items.append(output_item)
 
-        print()
-        print(f"Query: {item.query}")
-        print(f"Predicted Answer: {predicted_answer}")
-        print(f"Expected Answer: {item.answer}")
-        print(f"Similarity Score: {similarity:.4f}\n")
-        print()
+        log.info("")
+        log.info(f"Query: {item.query}")
+        log.info(f"Predicted Answer: {predicted_answer}")
+        log.info(f"Expected Answer: {item.answer}")
+        log.info(f"Similarity Score: {similarity:.4f}\n")
+        log.info("")
 
     avg_similarity = sum(item.similarity_score for item in output_items) / len(
         output_items
     )
-    print(f"Average Similarity Score: {avg_similarity:.4f}")
-    print(f"Total Cost: ${client.calc_cost()}")
+    log.info(f"Average Similarity Score: {avg_similarity:.4f}")
+    log.info(f"Total Cost: ${client.calc_cost()}")
 
     output_dir = output_path / run_name
     output_dir.mkdir(parents=True, exist_ok=True)
