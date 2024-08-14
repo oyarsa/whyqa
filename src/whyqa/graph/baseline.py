@@ -381,6 +381,22 @@ def log_mapping(mapping: dict[str, str]) -> None:
         f"\n    {"/ ".join(olds)} -> {new}" for new, olds in reverse_mapping.items()
     ]
     log.debug("\n".join(lines))
+def merge_items(
+    client: GPTClient, item_id: str, items: Iterable[str], name: str
+) -> dict[str, str]:
+    """Merge items with similar meaning."""
+    prompt = f"""Given the following list of {name}s, one per line, merge {name}s with \
+similar meaning. Respond with the list of combined {name}s. The response format should \
+be 'old {name} -> new {name}' for each {name} that has been merged. Only include \
+{name} that have been merged.
+
+{name.capitalize()}s:
+{"\n".join(items)}
+
+Merged {name}s:"""
+    response = client.run(item_id, prompt)
+    response = remove_prefix(response, f"Merged {name}s:")
+    return parse_mapping(response)
 
 
 def merge_relations(
@@ -388,18 +404,7 @@ def merge_relations(
 ) -> Sequence[Graph]:
     """Merge nodes with similar meaning in the graphs."""
     relations = {relation for graph in graphs for _, relation, _ in graph.edges}
-    prompt = f"""Given the following list of relations, one per line, merge relations with \
-similar meaning. Respond with the list of combined relations. The response format should \
-be 'old relation -> new relation' for each relation that has been merged. Only include
-relations that have been merged.
-
-Relations:
-{"\n".join(relations)}
-
-Merged relations:"""
-    response = client.run(item_id, prompt)
-    response = remove_prefix(response, "Merged relations:")
-    relation_mapping = parse_mapping(response)
+    relation_mapping = merge_items(client, item_id, relations, "relation")
     log_mapping(relation_mapping)
 
     merged_graphs: list[Graph] = []
@@ -419,18 +424,7 @@ def merge_nodes(
 ) -> Sequence[Graph]:
     """Merge nodes with similar meaning in the graphs."""
     nodes = {node for graph in graphs for node in graph.nodes}
-    prompt = f"""Given the following list of nodes, one per line, merge nodes with \
-similar meaning. Respond with the list of combined nodes. The response format should \
-be 'old node -> new node' for each node that has been merged. Only include nodes
-that have been merged.
-
-Nodes:
-{"\n".join(nodes)}
-
-Merged nodes:"""
-    response = client.run(item_id, prompt)
-    response = remove_prefix(response, "Merged nodes:")
-    node_mapping = parse_mapping(response)
+    node_mapping = merge_items(client, item_id, nodes, "node")
     log_mapping(node_mapping)
 
     merged_graphs: list[Graph] = []
