@@ -208,14 +208,39 @@ class Graph:
     def __init__(self, edges: Iterable[tuple[str, str, str] | Edge]) -> None:
         """Constructs a graph with the given edges. Nodes are derived from the edges.
 
+        Edges containig self-loops and cycles with the same relation are removed.
+
         Args:
             edges: A sequence of tuples in the format (source, relation, destination).
         """
-        self.edges = tuple(Edge(src, rel, dst) for src, rel, dst in edges)
+        self.edges = tuple(
+            self._simplify_edges(Edge(src, rel, dst) for src, rel, dst in edges)
+        )
         nodes: list[str] = []
         for src, _, dst in self.edges:
             nodes.extend((src, dst))
         self.nodes = frozenset(nodes)
+
+    @classmethod
+    def _simplify_edges(cls, edges: Iterable[Edge]) -> Iterable[Edge]:
+        """Simplify the edges by removing self-loops and cycles with the same relation.
+
+        Considers only self-loops like "(A, R, A)" and "(A, R, B), (B, R, A)" as cycles.
+        I.e. cycles must have the same relation label or both sides.
+        """
+        cleaned_edges: set[Edge] = set()
+
+        for edge in edges:
+            if edge.source == edge.destination:
+                continue
+
+            reverse_key = Edge(edge.destination, edge.relation, edge.source)
+            if reverse_key in cleaned_edges:
+                continue
+
+            cleaned_edges.add(edge)
+
+        return cleaned_edges
 
 
 def parse_graph(graph_str: str) -> Graph:
