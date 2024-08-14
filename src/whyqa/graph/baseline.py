@@ -332,11 +332,11 @@ Answer:"""
 def format_graph(graph: Graph, indent_size: int = 0) -> str:
     """Format the nodes and edges of a graph as a string."""
     indent = " " * indent_size
-    lines = [f"\n{indent}Nodes: {len(graph.nodes)}"]
+    lines = [f"{indent}Nodes: {len(graph.nodes)}"]
     lines.extend(f"{indent}  {node}" for node in graph.nodes)
     lines.append(f"{indent}Edges: {len(graph.edges)}")
     lines.extend(f"{indent}  {src} -> {rel} -> {dst}" for src, rel, dst in graph.edges)
-    return "\n".join(lines)
+    return "\n".join(lines) + "\n"
 
 
 def log_graphs(graphs: Sequence[Graph], texts: Sequence[str]) -> None:
@@ -378,9 +378,11 @@ def log_mapping(mapping: dict[str, str]) -> None:
         reverse_mapping[new].append(old)
 
     lines = [
-        f"\n    {"/ ".join(olds)} -> {new}" for new, olds in reverse_mapping.items()
+        f"    {" / ".join(olds)} -> {new}" for new, olds in reverse_mapping.items()
     ]
-    log.debug("\n".join(lines))
+    log.debug("\n" + "\n".join(lines) + "\n")
+
+
 def merge_items(
     client: GPTClient, item_id: str, items: Iterable[str], name: str
 ) -> dict[str, str]:
@@ -507,6 +509,13 @@ def main(
         combined_graph = combine_graphs(client, item.id, graphs)
         log.debug(format_graph(combined_graph))
 
+        log.info("  Merging similar nodes in combined graph.")
+        combined_graph = merge_nodes(client, item.id, [combined_graph])[0]
+
+        log.info("  Merging similar relations in combined graph.")
+        combined_graph = merge_relations(client, item.id, [combined_graph])[0]
+        log.debug(format_graph(combined_graph))
+
         log.info("  Answering question.")
         predicted_answer = answer_question(client, item.id, combined_graph, item.query)
 
@@ -523,12 +532,10 @@ def main(
         )
         output_items.append(output_item)
 
-        log.info("")
-        log.info(f"Query: {item.query}")
+        log.info(f"\nQuery: {item.query}")
         log.info(f"Predicted Answer: {predicted_answer}")
         log.info(f"Expected Answer: {item.answer}")
         log.info(f"Similarity Score: {similarity:.4f}\n")
-        log.info("")
 
     avg_similarity = sum(item.similarity_score for item in output_items) / len(
         output_items
