@@ -411,6 +411,7 @@ def merge_items(
     """Merge items with similar meaning."""
     prompt = f"""Given the following list of {name}s, one per line, merge {name}s with \
 similar meaning. Respond with the list of combined {name}s. The response format should \
+only contain the merged items and no other text or formatting. The items should be in the \
 be 'old {name} -> new {name}' for each {name} that has been merged. Only include \
 {name} that have been merged.
 
