@@ -5,8 +5,13 @@ import logging
 import re
 import string
 from collections import Counter
-from dataclasses import dataclass
 from contextlib import contextmanager
+from dataclasses import asdict, dataclass
+from typing import no_type_check
+
+from rouge_score import rouge_scorer  # type: ignore
+
+
 @contextmanager
 def disable_logging():
     """Temporarily disable logging.
@@ -46,6 +51,48 @@ class Result:
     recall: float
     f1: float
     em: float
+    rouge_l_precision: float
+    rouge_l_recall: float
+    rouge_l_f1: float
+
+    def __str__(self) -> str:
+        output = ["Dataset metrics:"]
+        output.extend(f"  {name}: {value}" for name, value in asdict(self).items())
+        return "\n".join(output)
+
+
+@dataclass(frozen=True)
+class RougeResult:
+    precision: float
+    recall: float
+    f1: float
+
+
+@no_type_check
+def calculate_rouge_l(text1: str, text2: str) -> rouge_scorer.scoring.Score:
+    """Calculate ROUGE-L scores between two strings."""
+    with disable_logging():
+        scorer = rouge_scorer.RougeScorer(["rougeL"], use_stemmer=True)
+        scores = scorer.score(text1, text2)
+    return scores["rougeL"]
+
+
+def calculate_rouge_l_dataset(instances: list[Instance]) -> RougeResult:
+    precisions: list[float] = []
+    recalls: list[float] = []
+    f1s: list[float] = []
+
+    for instance in instances:
+        scores = calculate_rouge_l(instance.gold, instance.pred)
+        precisions.append(float(scores.precision))  # type: ignore
+        recalls.append(float(scores.recall))  # type: ignore
+        f1s.append(float(scores.fmeasure))  # type: ignore
+
+    return RougeResult(
+        precision=sum(precisions) / len(precisions),
+        recall=sum(recalls) / len(recalls),
+        f1=sum(f1s) / len(f1s),
+    )
 
 
 def _get_tokens(s: str) -> list[str]:
@@ -58,7 +105,15 @@ def _get_tokens(s: str) -> list[str]:
     return s.split()
 
 
-def calculate_dataset(instances: list[Instance]) -> Result:
+@dataclass(frozen=True)
+class StandardResult:
+    precision: float
+    recall: float
+    f1: float
+    em: float
+
+
+def calculate_standard(instances: list[Instance]) -> StandardResult:
     """Calculate dataset token-level precision, recall and F1 scores, and Exact Match."""
     gold_len = 0
     pred_len = 0
@@ -86,7 +141,21 @@ def calculate_dataset(instances: list[Instance]) -> Result:
     )
     em = equal_count / len(instances)
 
-    return Result(precision=precision, recall=recall, f1=f1, em=em)
+    return StandardResult(precision=precision, recall=recall, f1=f1, em=em)
+
+
+def calculate_dataset(instances: list[Instance]) -> Result:
+    standard = calculate_standard(instances)
+    rouge = calculate_rouge_l_dataset(instances)
+    return Result(
+        precision=standard.precision,
+        recall=standard.recall,
+        f1=standard.f1,
+        em=standard.em,
+        rouge_l_precision=rouge.precision,
+        rouge_l_recall=rouge.recall,
+        rouge_l_f1=rouge.f1,
+    )
 
 
 def calculate_sentence(gold: str, pred: str) -> Result:
@@ -109,4 +178,14 @@ def calculate_sentence(gold: str, pred: str) -> Result:
     )
     em = int(gold_toks == pred_toks)
 
-    return Result(precision=precision, recall=recall, f1=f1, em=em)
+    rouge_l = calculate_rouge_l(gold, pred)
+
+    return Result(
+        precision=precision,
+        recall=recall,
+        f1=f1,
+        em=em,
+        rouge_l_precision=rouge_l.precision,  # type: ignore
+        rouge_l_recall=rouge_l.recall,  # type: ignore
+        rouge_l_f1=rouge_l.fmeasure,  # type: ignore
+    )
