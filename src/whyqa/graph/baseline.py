@@ -532,9 +532,12 @@ def main(
         "run_name": run_name,
         "timestamp": datetime.now().isoformat(),
         "max_texts": max_texts,
-        "seed": seed,
         "max_samples": max_samples,
+        "seed": seed,
     }
+    log.info(
+        "Configuration:\n" + "\n".join(f"  {k}: {v}" for k, v in config.items()) + "\n"
+    )
 
     dataset = dataset[:max_samples]
     output_items: list[OutputItem] = []
