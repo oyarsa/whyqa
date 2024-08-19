@@ -57,10 +57,12 @@ import openai
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
+from whyqa import metrics as metrics_
+
 log = logging.getLogger(__file__)
 
 
-@dataclass
+@dataclass(frozen=True)
 class DatasetItem:
     id: str
     query: str
@@ -68,14 +70,29 @@ class DatasetItem:
     answer: str
 
 
-@dataclass
+@dataclass(frozen=True)
 class OutputItem:
     id: str
     query: str
     texts: Sequence[str]
     expected_answer: str
     generated_answer: str
-    similarity_score: float
+
+
+@dataclass(frozen=True)
+class Metrics:
+    cosine_similarity: float
+    em: float
+    f1: float
+    rouge_l_precision: float
+    rouge_l_recall: float
+    rouge_l_f1: float
+
+
+@dataclass(frozen=True)
+class ResultItem:
+    output: OutputItem
+    metrics: Metrics
 
 
 @dataclass
@@ -554,7 +571,6 @@ def main(
             texts=item.texts,
             expected_answer=item.answer,
             generated_answer=predicted_answer,
-            similarity_score=similarity,
         )
         output_items.append(output_item)
 
@@ -563,8 +579,36 @@ def main(
         log.info(f"Expected Answer: {item.answer}")
         log.info(f"Similarity Score: {similarity:.4f}\n")
 
-    avg_similarity = sum(item.similarity_score for item in output_items) / len(
-        output_items
+    results: list[ResultItem] = []
+    for output in output_items:
+        cosine = calculate_similarity(
+            output.expected_answer, output.generated_answer, senttf_model
+        )
+        metrics = metrics_.calculate_sentence(
+            output.expected_answer, output.generated_answer
+        )
+        results.append(
+            ResultItem(
+                output,
+                Metrics(
+                    cosine_similarity=cosine,
+                    em=metrics.em,
+                    f1=metrics.f1,
+                    rouge_l_precision=metrics.rouge_l_precision,
+                    rouge_l_recall=metrics.rouge_l_recall,
+                    rouge_l_f1=metrics.rouge_l_f1,
+                ),
+            )
+        )
+
+    dataset_metrics = metrics_.calculate_dataset([
+        metrics_.Instance(output.expected_answer, output.generated_answer)
+        for output in output_items
+    ])
+    log.info(dataset_metrics)
+
+    avg_similarity = sum(result.metrics.cosine_similarity for result in results) / len(
+        results
     )
     log.info(f"Average Similarity Score: {avg_similarity:.4f}")
     log.info(f"Total Cost: ${client.calc_cost()}")
@@ -573,7 +617,7 @@ def main(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     (output_dir / "result.json").write_text(
-        json.dumps([asdict(item) for item in output_items], indent=2)
+        json.dumps([asdict(result) for result in results], indent=2)
     )
     (output_dir / "config.json").write_text(json.dumps(config, indent=2))
 
@@ -618,6 +662,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--max-texts",
+        "-k",
         type=int,
         default=None,
         help="Maximum number of texts to process per item (default: all)",
