@@ -1,9 +1,37 @@
 """Calculate metrics for WhyQA"""
 
+import copy
+import logging
 import re
 import string
 from collections import Counter
 from dataclasses import dataclass
+from contextlib import contextmanager
+@contextmanager
+def disable_logging():
+    """Temporarily disable logging.
+
+    This is useful when using external libraries that log to the root logger (*cough*
+    rouge_score *cough*).
+
+    Any log messages that are generated during the context will be discarded, including
+    our own, unfortunately.
+    """
+    root = logging.getLogger()
+    original_level = root.level
+    original_handlers = copy.deepcopy(root.handlers)
+
+    try:
+        yield
+    finally:
+        # Remove all handlers
+        for handler in root.handlers[:]:
+            root.removeHandler(handler)
+        # Restore original handlers
+        for handler in original_handlers:
+            root.addHandler(handler)
+        # Restore original level
+        root.setLevel(original_level)
 
 
 @dataclass(frozen=True)
