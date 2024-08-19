@@ -5,6 +5,7 @@ import logging
 import re
 import string
 from collections import Counter
+from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass
 from typing import no_type_check
@@ -13,7 +14,7 @@ from rouge_score import rouge_scorer  # type: ignore
 
 
 @contextmanager
-def disable_logging():
+def disable_logging() -> Iterator[None]:
     """Temporarily disable logging.
 
     This is useful when using external libraries that log to the root logger (*cough*
