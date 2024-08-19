@@ -56,11 +56,6 @@ class Result:
     rouge_l_recall: float
     rouge_l_f1: float
 
-    def __str__(self) -> str:
-        output = ["Dataset metrics:"]
-        output.extend(f"  {name}: {value}" for name, value in asdict(self).items())
-        return "\n".join(output)
-
 
 @dataclass(frozen=True)
 class RougeResult:

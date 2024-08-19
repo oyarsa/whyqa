@@ -88,6 +88,11 @@ class Metrics:
     rouge_l_recall: float
     rouge_l_f1: float
 
+    def __str__(self) -> str:
+        output = ["Dataset metrics:"]
+        output.extend(f"  {name}: {value}" for name, value in asdict(self).items())
+        return "\n".join(output)
+
 
 @dataclass(frozen=True)
 class ResultItem:
@@ -605,12 +610,19 @@ def main(
         metrics_.Instance(output.expected_answer, output.generated_answer)
         for output in output_items
     ])
-    log.info(dataset_metrics)
-
     avg_similarity = sum(result.metrics.cosine_similarity for result in results) / len(
         results
     )
-    log.info(f"Average Similarity Score: {avg_similarity:.4f}")
+    final_metrics = Metrics(
+        cosine_similarity=avg_similarity,
+        em=dataset_metrics.em,
+        f1=dataset_metrics.f1,
+        rouge_l_precision=dataset_metrics.rouge_l_precision,
+        rouge_l_recall=dataset_metrics.rouge_l_recall,
+        rouge_l_f1=dataset_metrics.rouge_l_f1,
+    )
+    log.info(final_metrics)
+
     log.info(f"Total Cost: ${client.calc_cost()}")
 
     output_dir = output_path / run_name
@@ -620,6 +632,9 @@ def main(
         json.dumps([asdict(result) for result in results], indent=2)
     )
     (output_dir / "config.json").write_text(json.dumps(config, indent=2))
+    (output_dir / "metrics.json").write_text(
+        json.dumps(asdict(final_metrics), indent=2)
+    )
 
     log_serialisable = {
         item_id: [asdict(interaction) for interaction in interactions]
