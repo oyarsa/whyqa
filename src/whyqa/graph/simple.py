@@ -43,6 +43,7 @@ import dotenv
 import openai
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
+from tqdm import tqdm
 
 from whyqa import metrics as metrics_
 
@@ -222,7 +223,8 @@ def main(
     max_samples: int | None,
     log_level: str,
 ) -> None:
-    # Set up logger
+    if log_level.upper() not in ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"):
+        raise ValueError(f"Invalid log level: {log_level}")
     handler = logging.StreamHandler(sys.stdout)
     formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
     handler.setFormatter(formatter)
@@ -263,15 +265,12 @@ def main(
     dataset = dataset[:max_samples]
     output_items: list[OutputItem] = []
 
-    for i, item in enumerate(dataset, 1):
-        log.info(f"Item {i}/{len(dataset)}:")
+    for i, item in enumerate(tqdm(dataset), 1):
+        log.debug(f"Item {i}/{len(dataset)}:")
 
         texts = item.texts[:max_texts]
-        log.info(f"  Generating answer using {len(texts)} texts.")
+        log.debug(f"  Generating answer using {len(texts)} texts.")
         predicted_answer = answer_question(client, item.id, item.query, texts)
-
-        log.info("  Calculating metrics.")
-        cosine = calculate_similarity(item.answer, predicted_answer, senttf_model)
 
         output_items.append(
             OutputItem(
@@ -283,10 +282,9 @@ def main(
             )
         )
 
-        log.info(f"Query: {item.query}")
-        log.info(f"Predicted Answer: {predicted_answer}")
-        log.info(f"Expected Answer: {item.answer}")
-        log.info(f"Similarity Score: {cosine:.4f}\n")
+        log.debug(f"Query: {item.query}")
+        log.debug(f"Predicted Answer: {predicted_answer}")
+        log.debug(f"Expected Answer: {item.answer}")
 
     results: list[ResultItem] = []
     for output in output_items:

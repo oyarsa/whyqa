@@ -56,6 +56,7 @@ import dotenv
 import openai
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
+from tqdm import tqdm
 
 from whyqa import metrics as metrics_
 
@@ -501,7 +502,6 @@ def main(
     max_samples: int | None,
     log_level: str,
 ) -> None:
-    # Set up logger
     if log_level.upper() not in ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"):
         raise ValueError(f"Invalid log level: {log_level}")
     handler = logging.StreamHandler(sys.stdout)
@@ -544,32 +544,32 @@ def main(
     dataset = dataset[:max_samples]
     output_items: list[OutputItem] = []
 
-    for i, item in enumerate(dataset, 1):
-        log.info(f"Item {i}/{len(dataset)}:")
+    for i, item in enumerate(tqdm(dataset), 1):
+        log.debug(f"Item {i}/{len(dataset)}:")
 
         texts = item.texts[:max_texts]
-        log.info(f"  Building causal graphs. ({len(texts)} texts)")
+        log.debug(f"  Building causal graphs. ({len(texts)} texts)")
         graphs = [build_causal_graph(client, item.id, text) for text in texts]
         log_graphs(graphs, texts)
 
-        log.info("  Merging similar nodes.")
+        log.debug("  Merging similar nodes.")
         graphs = merge_nodes(client, item.id, graphs)
 
-        log.info("  Merging similar relations.")
+        log.debug("  Merging similar relations.")
         graphs = merge_relations(client, item.id, graphs)
 
-        log.info("  Combining causal graphs.")
+        log.debug("  Combining causal graphs.")
         combined_graph = combine_graphs(client, item.id, graphs)
         log.debug(format_graph(combined_graph))
 
-        log.info("  Merging similar nodes in combined graph.")
+        log.debug("  Merging similar nodes in combined graph.")
         combined_graph = merge_nodes(client, item.id, [combined_graph])[0]
 
-        log.info("  Merging similar relations in combined graph.")
+        log.debug("  Merging similar relations in combined graph.")
         combined_graph = merge_relations(client, item.id, [combined_graph])[0]
         log.debug(format_graph(combined_graph))
 
-        log.info("  Answering question.")
+        log.debug("  Answering question.")
         predicted_answer = answer_question(client, item.id, combined_graph, item.query)
 
         output_item = OutputItem(
@@ -581,9 +581,9 @@ def main(
         )
         output_items.append(output_item)
 
-        log.info(f"Query: {item.query}")
-        log.info(f"Predicted Answer: {predicted_answer}")
-        log.info(f"Expected Answer: {item.answer}")
+        log.debug(f"Query: {item.query}")
+        log.debug(f"Predicted Answer: {predicted_answer}")
+        log.debug(f"Expected Answer: {item.answer}")
 
     results: list[ResultItem] = []
     for output in output_items:
