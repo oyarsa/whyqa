@@ -1,20 +1,25 @@
-"""Calculate metrics for WhyQA"""
+"""Calcuate metrics for WhyQA.
 
-import copy
+Mostly copied from CausalQA's evaluation script:
+https://github.com/andreaschandra/CausalQA/blob/c25bc80f7c68709e7ae87739195168da016a243e/finetuning/measures.py#L45
+
+With some refactoring and modifications to fit the other parts of the project.
+"""
+
 import logging
 import re
 import string
 from collections import Counter
-from collections.abc import Iterator
+from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from typing import no_type_check
 
-from rouge_score import rouge_scorer  # type: ignore
+from rouge_score import rouge_scorer, scoring  # type: ignore
 
 
 @contextmanager
-def disable_logging() -> Iterator[None]:
+def _disable_logging() -> Iterator[None]:
     """Temporarily disable logging.
 
     This is useful when using external libraries that log to the root logger (*cough*
@@ -25,7 +30,7 @@ def disable_logging() -> Iterator[None]:
     """
     root = logging.getLogger()
     original_level = root.level
-    original_handlers = copy.deepcopy(root.handlers)
+    original_handlers = root.handlers.copy()
 
     try:
         yield
@@ -48,8 +53,6 @@ class Instance:
 
 @dataclass(frozen=True)
 class Result:
-    precision: float
-    recall: float
     f1: float
     em: float
     rouge_l_precision: float
@@ -64,124 +67,96 @@ class RougeResult:
     f1: float
 
 
+def _preprocess(s: str) -> str:
+    """Preprocess the input string, lowercasing, removing punctuation and articles."""
+    s = s.casefold()
+    s = s.translate(str.maketrans("", "", string.punctuation))
+    s = re.sub(r"\b(a|an|the)\b", " ", s)
+    return " ".join(s.split())
+
+
+def _f1(pred: str, ground_truth: str) -> float:
+    """Calculate F1 score between prediction and ground truth.
+
+    Follows a standard bag-of-words F1 score calculation with the text being tokenized
+    by whitespace.
+    """
+    prediction_tokens = pred.split()
+    ground_truth_tokens = ground_truth.split()
+
+    common = Counter(prediction_tokens) & Counter(ground_truth_tokens)
+
+    equal = sum(common.values())
+    if equal == 0:
+        return 0
+
+    precision = equal / len(prediction_tokens)
+    recall = equal / len(ground_truth_tokens)
+
+    return (2 * precision * recall) / (precision + recall)
+
+
+def _em(pred: str, ground_truth: str) -> int:
+    """Calculate exact match between prediction and ground truth."""
+    return int(pred == ground_truth)
+
+
+def _calculate_measures(
+    measure: Callable[[str, str], float],
+    predictions: Iterable[str],
+    ground_truths: Iterable[Iterable[str]],
+) -> float:
+    """Calculate measures for predictions and ground truths using a measure function."""
+    result = 0
+
+    for pred, ground_truth in zip(predictions, ground_truths):
+        value = max(measure(pred, answer) for answer in ground_truth)
+        result += value
+
+    return result / len(list(predictions))
+
+
 @no_type_check
-def calculate_rouge_l(text1: str, text2: str) -> rouge_scorer.scoring.Score:
-    """Calculate ROUGE-L scores between two strings."""
-    with disable_logging():
-        scorer = rouge_scorer.RougeScorer(["rougeL"], use_stemmer=True)
-        scores = scorer.score(text1, text2)
-    return scores["rougeL"]
+def _rouge_l(
+    predictions: Iterable[str], ground_truths: Iterable[Iterable[str]]
+) -> RougeResult:
+    """Calculate ROUGE-L scores for predictions and ground truths."""
 
+    with _disable_logging():
+        scorer = rouge_scorer.RougeScorer(["rougeL"])
+        aggregator = scoring.BootstrapAggregator()
 
-def calculate_rouge_l_dataset(instances: list[Instance]) -> RougeResult:
-    precisions: list[float] = []
-    recalls: list[float] = []
-    f1s: list[float] = []
+        for pred, gts in zip(predictions, ground_truths):
+            score = scorer.score_multi(gts, pred)
+            aggregator.add_scores(score)
 
-    for instance in instances:
-        scores = calculate_rouge_l(instance.gold, instance.pred)
-        precisions.append(float(scores.precision))  # type: ignore
-        recalls.append(float(scores.recall))  # type: ignore
-        f1s.append(float(scores.fmeasure))  # type: ignore
+        results = aggregator.aggregate()
 
     return RougeResult(
-        precision=sum(precisions) / len(precisions),
-        recall=sum(recalls) / len(recalls),
-        f1=sum(f1s) / len(f1s),
+        precision=results["rougeL"].mid.precision,
+        recall=results["rougeL"].mid.recall,
+        f1=results["rougeL"].mid.fmeasure,
     )
-
-
-def _get_tokens(s: str) -> list[str]:
-    """Lower text, remove punctuation, articles and split by whitespace."""
-    s = s.casefold()
-    # remove punctuation
-    s = s.translate(str.maketrans("", "", string.punctuation))
-    # remove common articles
-    s = re.sub(r"\b(a|an|the)\b", " ", s)
-    return s.split()
-
-
-@dataclass(frozen=True)
-class StandardResult:
-    precision: float
-    recall: float
-    f1: float
-    em: float
-
-
-def calculate_standard(instances: list[Instance]) -> StandardResult:
-    """Calculate dataset token-level precision, recall and F1 scores, and Exact Match."""
-    gold_len = 0
-    pred_len = 0
-    common_tokens = 0
-    equal_count = 0
-
-    for instance in instances:
-        pred_toks = _get_tokens(instance.pred)
-        gold_toks = _get_tokens(instance.gold)
-
-        gold_len += len(gold_toks)
-        pred_len += len(pred_toks)
-
-        common = Counter(gold_toks) & Counter(pred_toks)
-        common_tokens += sum(common.values())
-
-        equal_count += int(gold_toks == pred_toks)
-
-    precision = common_tokens / pred_len if pred_len != 0 else 0
-    recall = common_tokens / gold_len if gold_len != 0 else 0
-    f1 = (
-        (2 * precision * recall) / (precision + recall)
-        if precision + recall != 0
-        else 0
-    )
-    em = equal_count / len(instances)
-
-    return StandardResult(precision=precision, recall=recall, f1=f1, em=em)
 
 
 def calculate_dataset(instances: list[Instance]) -> Result:
-    standard = calculate_standard(instances)
-    rouge = calculate_rouge_l_dataset(instances)
+    """Calculate dataset-level metrics: token F1, exact match and ROUGE-L."""
+    predictions = [_preprocess(instance.pred) for instance in instances]
+    ground_truths = [[_preprocess(instance.gold)] for instance in instances]
+
+    rougel = _rouge_l(predictions, ground_truths)
+    f1 = _calculate_measures(_f1, predictions, ground_truths)
+    em = _calculate_measures(_em, predictions, ground_truths)
+
     return Result(
-        precision=standard.precision,
-        recall=standard.recall,
-        f1=standard.f1,
-        em=standard.em,
-        rouge_l_precision=rouge.precision,
-        rouge_l_recall=rouge.recall,
-        rouge_l_f1=rouge.f1,
+        f1=f1,
+        em=em,
+        rouge_l_precision=rougel.precision,
+        rouge_l_recall=rougel.recall,
+        rouge_l_f1=rougel.f1,
     )
 
 
 def calculate_sentence(gold: str, pred: str) -> Result:
-    """Calculate sentence token precision, recall and F1 scores, and Exact Match."""
-    gold_toks = _get_tokens(gold)
-    pred_toks = _get_tokens(pred)
-
-    pred_len = len(pred_toks)
-    gold_len = len(gold_toks)
-
-    common = Counter(gold_toks) & Counter(pred_toks)
-    common_tokens = sum(common.values())
-
-    precision = common_tokens / pred_len if pred_len != 0 else 0
-    recall = common_tokens / gold_len if gold_len != 0 else 0
-    f1 = (
-        (2 * precision * recall) / (precision + recall)
-        if precision + recall != 0
-        else 0
-    )
-    em = int(gold_toks == pred_toks)
-
-    rouge_l = calculate_rouge_l(gold, pred)
-
-    return Result(
-        precision=precision,
-        recall=recall,
-        f1=f1,
-        em=em,
-        rouge_l_precision=rouge_l.precision,  # type: ignore
-        rouge_l_recall=rouge_l.recall,  # type: ignore
-        rouge_l_f1=rouge_l.fmeasure,  # type: ignore
-    )
+    """Calculate sentence-level metrics: token F1, exact match and ROUGE-L."""
+    return calculate_dataset([Instance(gold=gold, pred=pred)])
