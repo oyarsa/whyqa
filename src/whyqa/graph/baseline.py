@@ -353,8 +353,10 @@ def answer_question(
 ) -> str:
     """Generate an answer to the question using the causal graph."""
     graph_repr = "\n".join(f"{src} {rel} {dst}" for src, rel, dst in graph.edges)
-    prompt = f"""Using the following causal graph, answer the question. Be succint in \
-your response.
+    prompt = f"""Using the following causal graph, answer the question.
+Make sure to consider the relationships in the graph when generating the answer.
+The answer must be as concise as possible and should not contain any additional text.
+Ensure that the answer only contains the relevant information and no additional context.
 
 Graph:
 {graph_repr}
@@ -570,9 +572,6 @@ def main(
         log.info("  Answering question.")
         predicted_answer = answer_question(client, item.id, combined_graph, item.query)
 
-        log.info("  Calculating similarity score.")
-        similarity = calculate_similarity(predicted_answer, item.answer, senttf_model)
-
         output_item = OutputItem(
             id=item.id,
             query=item.query,
@@ -585,7 +584,6 @@ def main(
         log.info(f"Query: {item.query}")
         log.info(f"Predicted Answer: {predicted_answer}")
         log.info(f"Expected Answer: {item.answer}")
-        log.info(f"Similarity Score: {similarity:.4f}\n")
 
     results: list[ResultItem] = []
     for output in output_items:
