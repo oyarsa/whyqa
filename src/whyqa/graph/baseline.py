@@ -327,9 +327,6 @@ Causal relationships:"""
 
 def combine_graphs(client: GPTClient, item_id: str, graphs: Iterable[Graph]) -> Graph:
     """Combine multiple graphs into a single graph using the LLM."""
-    if not graphs:
-        raise ValueError("At least one graph must be provided.")
-
     graph_representations: list[str] = []
     for i, graph in enumerate(graphs, 1):
         edges = (f"{src} -> {rel} -> {dst}" for src, rel, dst in graph.edges)
