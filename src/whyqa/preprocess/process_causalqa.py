@@ -21,6 +21,7 @@ import argparse
 import csv
 import json
 import re
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -47,11 +48,14 @@ def process_context(context: str) -> list[str]:
 
 
 def main(input_path: Path, output_file: Path) -> None:
+    # Increase the field size limit to handle large context strings
+    csv.field_size_limit(sys.maxsize)
+
     with input_path.open("r", newline="", encoding="utf-8") as csvfile:
         reader = csv.DictReader(csvfile)
         output: list[dict[str, Any]] = [
             {
-                "id": int(row["id"]),
+                "id": row["id"],
                 "query": row["question"],
                 "texts": process_context(row["context"]),
                 "answer": row["answer"],
