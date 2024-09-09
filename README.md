@@ -19,3 +19,6 @@ poetry install  # set up virtualenv and install dependencies
 poetry shell  # activate virtualenv
 ```
 
+## License
+
+This project is licensed under the GPL version 3 or later.
